@@ -1,0 +1,3387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>ESSS Solar System Walk · Addis Ababa</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀</text></svg>">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Model Viewer for 3D GLB rendering -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Ethiopic:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#060814;
+    --panel:rgba(11,16,34,0.82);
+    --panel-solid:#0b1022;
+    --stroke:rgba(120,160,255,0.18);
+    --stroke-strong:rgba(140,180,255,0.35);
+    --text:#e8edff;
+    --muted:#8b97c4;
+    --gold:#ffce4d;
+    --gold-deep:#ff9d2e;
+    --accent:#5aa6ff;
+    --radius:16px;
+    --shadow:0 18px 50px rgba(0,0,0,0.55);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Space Grotesk","Noto Sans Ethiopic",system-ui,sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #map{position:absolute;inset:0;background:#05070f;z-index:0;}
+
+  /* Starfield over the dark map for extra "space" depth */
+  #map::after{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:400;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.45), transparent),
+      radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,.35), transparent),
+      radial-gradient(1.4px 1.4px at 85% 20%, rgba(255,255,255,.4), transparent),
+      radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,.3), transparent),
+      radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,.3), transparent);
+    opacity:.5;mix-blend-mode:screen;
+  }
+
+  .am{font-family:"Noto Sans Ethiopic",sans-serif;}
+
+  /* Amharic language mode — slightly increased line-height for Ethiopic readability */
+  body.lang-am .widget p,
+  body.lang-am .pp-fact,
+  body.lang-am .pp-walk,
+  body.lang-am .pp-grid .l,
+  body.lang-am .wizard-bd p { line-height: 1.55; }
+  body.lang-am .fab span { font-size: 10.5px; }
+
+  /* ---------- Top info bar ---------- */
+  #topbar{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    z-index:1000;display:flex;align-items:center;gap:14px;
+    padding:9px 16px 9px 12px;border-radius:999px;
+    background:var(--panel);backdrop-filter:blur(14px);
+    border:1px solid var(--stroke);box-shadow:var(--shadow);
+    max-width:calc(100vw - 28px);
+  }
+  #topbar .badge{
+    display:flex;align-items:center;gap:9px;padding:5px 12px 5px 8px;border-radius:999px;
+    background:linear-gradient(135deg,rgba(255,206,77,.16),rgba(255,157,46,.06));
+    border:1px solid rgba(255,206,77,.32);
+  }
+  #topbar .sunchip{
+    width:18px;height:18px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff6d6,#ffce4d 45%,#ff8a1e 100%);
+    box-shadow:0 0 12px 2px rgba(255,180,60,.8);
+  }
+  #topbar .badge b{font-family:"Orbitron",sans-serif;font-weight:700;letter-spacing:.5px;font-size:12.5px;color:var(--gold);}
+  #topbar .meta{display:flex;flex-direction:column;line-height:1.15;}
+  #topbar .meta .k{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;}
+  #topbar .meta .s{font-size:10.5px;color:var(--muted);white-space:nowrap;}
+  #topbar .am{font-size:11px;}
+
+  /* ---------- Legend panel ---------- */
+  #legend{
+    position:absolute;top:14px;left:14px;z-index:1000;width:312px;max-width:calc(100vw - 28px);
+    background:var(--panel);backdrop-filter:blur(16px);
+    border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow);
+    overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 28px);
+  }
+  #legend .hd{
+    display:flex;align-items:center;gap:12px;padding:15px 16px;cursor:pointer;
+    border-bottom:1px solid var(--stroke);
+  }
+  #legend .logo{
+    width:38px;height:38px;border-radius:11px;flex:none;position:relative;
+    background:radial-gradient(circle at 32% 28%,#10204a,#070b1c);
+    border:1px solid var(--stroke-strong);display:grid;place-items:center;
+    box-shadow:inset 0 0 14px rgba(90,166,255,.25);
+  }
+  #legend .logo .o{position:absolute;border:1px solid rgba(120,170,255,.5);border-radius:50%;}
+  #legend .logo .o1{width:26px;height:26px;}
+  #legend .logo .o2{width:16px;height:16px;}
+  #legend .logo .sun{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle,#fff3cf,#ffb43c);box-shadow:0 0 8px #ffba43;}
+  #legend .ttl{flex:1;min-width:0;}
+  #legend .ttl h1{margin:0;font-family:"Orbitron",sans-serif;font-size:14.5px;font-weight:700;letter-spacing:.4px;line-height:1.15;}
+  #legend .ttl p{margin:2px 0 0;font-size:11px;color:var(--muted);}
+  #legend .chev{color:var(--muted);transition:transform .25s ease;flex:none;}
+  #legend.collapsed .chev{transform:rotate(-90deg);}
+  #legend .body{overflow-y:auto;}
+  #legend.collapsed .body{display:none;}
+
+  .seg{display:flex;gap:6px;padding:12px 14px 4px;}
+  .seg button{
+    flex:1;padding:8px 6px;border-radius:9px;border:1px solid var(--stroke);
+    background:rgba(255,255,255,.02);color:var(--muted);font-family:inherit;
+    font-size:11.5px;font-weight:600;cursor:pointer;transition:.18s;letter-spacing:.2px;
+  }
+  .seg button.active{background:linear-gradient(135deg,rgba(90,166,255,.22),rgba(90,166,255,.08));border-color:rgba(90,166,255,.5);color:#dbe8ff;}
+  .seg button:hover{color:#dbe8ff;}
+
+  .plist{padding:8px 10px 4px;}
+  .prow{
+    display:flex;align-items:center;gap:11px;padding:8px 8px;border-radius:11px;cursor:pointer;
+    transition:background .15s;
+  }
+  .prow:hover{background:rgba(120,160,255,.07);}
+  .prow .cbx{
+    width:18px;height:18px;border-radius:6px;border:2px solid currentColor;flex:none;position:relative;
+    transition:.15s;display:grid;place-items:center;
+  }
+  .prow.on .cbx{background:currentColor;}
+  .prow.on .cbx::after{content:"";width:9px;height:5px;border:2px solid #0b1022;border-top:0;border-right:0;transform:rotate(-45deg) translateY(-1px);}
+  .prow .dot{
+    width:22px;height:22px;border-radius:50%;flex:none;position:relative;
+    box-shadow:0 0 10px -1px currentColor, inset 0 0 6px rgba(255,255,255,.18);
+  }
+  .prow .nm{flex:1;min-width:0;}
+  .prow .nm b{font-size:13.5px;font-weight:600;color:var(--text);display:block;line-height:1.1;}
+  .prow .nm span{font-size:11px;color:var(--muted);}
+  .prow .nm span.am{font-size:10.5px;}
+  .prow .km{font-size:11px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;}
+  .prow.dwarf .nm b::after{content:attr(data-badge);font-family:inherit;font-size:8.5px;font-weight:700;letter-spacing:.5px;
+    color:var(--muted);border:1px solid var(--stroke);padding:1px 5px;border-radius:6px;margin-left:7px;vertical-align:middle;text-transform:uppercase;}
+
+  /* walk widget */
+  .widget{margin:8px 12px 14px;padding:13px 14px;border-radius:13px;
+    background:linear-gradient(150deg,rgba(90,166,255,.10),rgba(255,206,77,.05));
+    border:1px solid var(--stroke);}
+  .widget h3{margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);
+    display:flex;align-items:center;gap:7px;}
+  .widget h3::before{content:"🚶";filter:saturate(0) brightness(1.6);}
+  .widget .big{font-family:"Orbitron",sans-serif;font-size:23px;font-weight:700;color:var(--gold);line-height:1;}
+  .widget p{margin:7px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45;}
+  .widget p b{color:#cfd8ff;font-weight:600;}
+
+  /* ---------- Buttons cluster (bottom-right) ---------- */
+  .fab-stack{position:absolute;right:14px;bottom:24px;z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+  .fab{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;
+    background:var(--panel);backdrop-filter:blur(14px);border:1px solid var(--stroke);
+    color:var(--text);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    box-shadow:var(--shadow);transition:.16s;white-space:nowrap;
+  }
+  .fab:hover{border-color:var(--stroke-strong);transform:translateY(-1px);}
+  .fab svg{width:15px;height:15px;opacity:.8;}
+
+  /* ---------- Planet & Sun markers ---------- */
+  .planet-ico{position:absolute;}
+  .planet-body{
+    width:100%;height:100%;border-radius:50%;position:relative;
+    box-shadow:0 0 0 1px rgba(255,255,255,.12), 0 0 14px -2px var(--glow), inset -3px -3px 8px rgba(0,0,0,.55), inset 3px 3px 7px rgba(255,255,255,.22);
+  }
+  .planet-ring{
+    position:absolute;left:50%;top:50%;width:185%;height:62%;border-radius:50%;
+    transform:translate(-50%,-50%) rotate(-22deg);
+    border:2.5px solid rgba(230,214,160,.85);border-left-color:transparent;border-right-color:transparent;
+    box-shadow:0 0 8px rgba(230,214,160,.5);
+  }
+  .planet-lab{
+    position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:5px;white-space:nowrap;
+    font-size:10.5px;font-weight:600;color:#dfe8ff;text-shadow:0 1px 4px #000, 0 0 8px rgba(0,0,0,.9);
+    letter-spacing:.3px;pointer-events:none;transition:opacity .25s ease;
+  }
+  /* declutter: drop inner labels + landmark notes when zoomed far out */
+  .lmk{transition:opacity .25s ease;}
+  .leaflet-container.z-out .planet-lab{opacity:0;}
+  .leaflet-container.z-mid .lmk{opacity:0;}
+  .planet-ico:hover .planet-body, .planet-ico:hover model-viewer{filter:brightness(1.15);}
+  /* Ensure model-viewer inside markers renders with transparent bg */
+  .planet-ico model-viewer, .sun-ico model-viewer{
+    --poster-color:transparent;
+    --progress-bar-color:transparent;
+    --progress-mask:transparent;
+  }
+
+  /* Sun */
+  .sun-ico{position:absolute;}
+  .sun-core{
+    display:block;position:absolute;inset:0;
+    width:100%;height:100%;border-radius:50%;z-index:2;
+    background:
+      radial-gradient(circle at 28% 24%, rgba(255,255,245,0.95) 0%, rgba(255,255,245,0) 14%),
+      radial-gradient(circle at 38% 34%, #fffce8 0%, #ffe44d 18%, #ffb82e 38%, #ff8516 60%, #d44d00 82%, #7a2000 100%);
+    box-shadow:
+      inset -4px -5px 8px rgba(100,30,0,0.5),
+      inset 2px 2px 5px rgba(255,255,200,0.2),
+      0 0 18px 5px rgba(255,180,60,.85),
+      0 0 45px 12px rgba(255,140,30,.4),
+      0 0 80px 25px rgba(255,100,20,.15);
+  }
+  .sun-pulse{position:absolute;left:50%;top:50%;width:100%;height:100%;border-radius:50%;
+    transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,190,70,.5),transparent 65%);
+    animation:sunpulse 3s ease-out infinite;z-index:1;}
+  .sun-pulse.d2{animation-delay:1.5s;}
+  @keyframes sunpulse{0%{transform:translate(-50%,-50%) scale(1);opacity:.7}100%{transform:translate(-50%,-50%) scale(3.4);opacity:0}}
+  .sun-lab{
+    position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:8px;white-space:nowrap;text-align:center;
+    pointer-events:none;
+  }
+  .sun-lab b{display:block;font-family:"Orbitron",sans-serif;font-size:12px;font-weight:700;color:#ffd76a;letter-spacing:.6px;text-shadow:0 1px 6px #000;}
+  .sun-lab span{font-size:10px;color:#ffe9b0;text-shadow:0 1px 5px #000;}
+
+  /* landmark annotation */
+  .lmk{
+    background:rgba(8,12,28,.72);backdrop-filter:blur(4px);
+    border:1px solid var(--stroke);border-radius:8px;padding:4px 9px;white-space:nowrap;
+    font-size:10.5px;color:#cdd8ff;box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  .lmk b{color:#fff;font-weight:600;}
+  .lmk i{color:var(--muted);font-style:normal;}
+
+  /* ---------- Popup ---------- */
+  .leaflet-popup-content-wrapper{
+    background:var(--panel-solid);color:var(--text);border-radius:16px;
+    border:1px solid var(--stroke-strong);box-shadow:0 22px 60px rgba(0,0,0,.7);padding:0;overflow:hidden;
+  }
+  .leaflet-popup-content{margin:0;width:268px !important;}
+  .leaflet-popup-tip{background:var(--panel-solid);border:1px solid var(--stroke-strong);}
+  .leaflet-popup-close-button{color:var(--muted) !important;font-size:22px !important;width:30px !important;height:30px !important;padding:4px 0 0 !important;}
+  .pp-head{padding:16px 16px 13px;position:relative;overflow:hidden;}
+  .pp-head .bg{position:absolute;inset:0;opacity:.9;}
+  .pp-head .row{position:relative;display:flex;align-items:center;gap:12px;}
+  .pp-orb{width:42px;height:42px;border-radius:50%;flex:none;box-shadow:0 0 16px -2px var(--glow),inset -3px -3px 7px rgba(0,0,0,.5),inset 3px 3px 6px rgba(255,255,255,.22);}
+  .pp-head h2{margin:0;font-family:"Orbitron",sans-serif;font-size:18px;font-weight:700;letter-spacing:.4px;line-height:1;}
+  .pp-head .sub{margin-top:3px;font-size:11.5px;color:var(--muted);}
+  .pp-head .sub .am{color:#cdd8ff;}
+  .pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--stroke);}
+  .pp-cell{background:var(--panel-solid);padding:10px 13px;}
+  .pp-cell .l{font-size:9.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);}
+  .pp-cell .v{font-size:14px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .pp-cell .v small{font-size:10.5px;color:var(--muted);font-weight:500;}
+  .pp-fact{padding:12px 14px;font-size:12px;line-height:1.5;color:#cdd6f5;border-top:1px solid var(--stroke);}
+  .pp-fact b{color:var(--gold);font-weight:600;}
+  .pp-lmk{padding:0 14px 12px;font-size:11px;color:var(--muted);display:flex;gap:7px;align-items:flex-start;}
+  .pp-lmk svg{flex:none;margin-top:1px;}
+  .pp-walk{padding:10px 14px;background:rgba(90,166,255,.07);border-top:1px solid var(--stroke);font-size:11.5px;color:#bcd0ff;}
+  .pp-walk b{color:#fff;font-family:"Orbitron",sans-serif;}
+  .pp-btn{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;
+    background:linear-gradient(135deg,var(--accent),#3d7fe0);color:#fff;border:0;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.3px;transition:.16s;
+  }
+  .pp-btn:hover{filter:brightness(1.1);}
+  .pp-btn svg{width:15px;height:15px;}
+
+  /* leaflet control re-skin */
+  .leaflet-control-zoom a{background:var(--panel) !important;color:var(--text) !important;border:1px solid var(--stroke) !important;backdrop-filter:blur(10px);}
+  .leaflet-control-zoom a:hover{background:var(--panel-solid) !important;}
+  .leaflet-bar{box-shadow:var(--shadow) !important;border:0 !important;}
+  .leaflet-control-attribution{background:rgba(6,8,20,.7) !important;color:#7a86b0 !important;font-size:10px;}
+  .leaflet-control-attribution a{color:#9fb0e0 !important;}
+
+  /* inset mini map */
+  #inset{
+    position:absolute;right:14px;top:14px;z-index:1000;width:168px;height:128px;border-radius:13px;overflow:hidden;
+    border:1px solid var(--stroke);box-shadow:var(--shadow);background:#070b1c;
+  }
+  #insetmap{width:100%;height:100%;}
+  #inset .cap{position:absolute;left:0;right:0;bottom:0;z-index:500;padding:5px 9px;font-size:9.5px;color:#cdd8ff;
+    background:linear-gradient(transparent,rgba(6,8,20,.92));pointer-events:none;letter-spacing:.3px;}
+  #inset .cap b{color:#fff;font-weight:600;}
+
+  /* ---------- Light theme variables and overrides ---------- */
+  body.light-theme {
+    --bg:#f0f3fa;
+    --panel:rgba(235,238,247,0.85);
+    --panel-solid:#f5f7fc;
+    --stroke:rgba(80,120,240,0.15);
+    --stroke-strong:rgba(80,120,240,0.28);
+    --text:#12162a;
+    --muted:#5c6587;
+    --gold:#d48800;
+    --gold-deep:#b25900;
+    --accent:#1d6fe3;
+    --shadow:0 14px 40px rgba(30,40,80,0.12);
+  }
+  body.light-theme #map {
+    background: #f0f3fa;
+  }
+  body.light-theme #inset {
+    background:#e6e9f2;
+    border-color:var(--stroke-strong);
+  }
+  body.light-theme #inset .cap {
+    background:linear-gradient(transparent,rgba(230,233,242,.92));
+    color:var(--text);
+  }
+  body.light-theme #inset .cap b {
+    color:#000;
+  }
+  body.light-theme .widget p b {
+    color: var(--accent);
+  }
+  body.light-theme .prow .nm b {
+    color: var(--text);
+  }
+  body.light-theme .pp-3d-box {
+    background: radial-gradient(circle at center, rgba(80,120,240,0.06) 0%, #ebedf5 100%) !important;
+  }
+  body.light-theme .pp-2d-fallback {
+    background: radial-gradient(circle at center, rgba(80,120,240,0.06) 0%, #ebedf5 100%) !important;
+  }
+  body.light-theme .pp-3d-title,
+  body.light-theme .pp-3d-title-main {
+    background: linear-gradient(to top, rgba(235,237,245,0.98) 0%, rgba(235,237,245,0.65) 60%, transparent 100%) !important;
+  }
+  body.light-theme .pp-3d-title h2,
+  body.light-theme .pp-3d-title-main h2 {
+    color: var(--text) !important;
+  }
+  body.light-theme .pp-3d-title .sub,
+  body.light-theme .pp-3d-title-main .sub {
+    color: var(--muted) !important;
+  }
+  body.light-theme .pp-fact {
+    color: var(--text);
+  }
+  body.light-theme .pp-walk {
+    color: var(--text);
+    background: rgba(30,110,255,0.08);
+  }
+  body.light-theme .leaflet-control-attribution {
+    background: rgba(245,247,252,.78) !important;
+    color: #4f587a !important;
+  }
+  body.light-theme .leaflet-control-attribution a {
+    color: var(--accent) !important;
+  }
+  body.light-theme .leaflet-popup-tip {
+    background: var(--panel-solid) !important;
+  }
+  body.light-theme .leaflet-popup-content-wrapper {
+    background: var(--panel-solid) !important;
+    color: var(--text) !important;
+  }
+  body.light-theme .planet-lab {
+    color: #12162a;
+    text-shadow: 0 1px 3px #fff, 0 0 6px #fff;
+  }
+  body.light-theme .sun-lab b {
+    color: var(--gold-deep);
+    text-shadow: 0 1px 3px #fff, 0 0 6px #fff;
+  }
+  body.light-theme .sun-lab span {
+    color: var(--muted);
+    text-shadow: 0 1px 3px #fff, 0 0 6px #fff;
+  }
+
+  /* Light theme specific overrides for inputs, buttons, and popups */
+  body.light-theme .search-row input,
+  body.light-theme .custom-size-row input {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text);
+    border-color: rgba(80, 120, 240, 0.2);
+  }
+  body.light-theme .search-row input:focus,
+  body.light-theme .custom-size-row input:focus {
+    border-color: var(--accent);
+    background: rgba(0, 0, 0, 0.02);
+  }
+  body.light-theme .search-row input::placeholder {
+    color: #8892b0;
+  }
+  body.light-theme .geo-btn {
+    background: rgba(0, 0, 0, 0.02);
+  }
+  body.light-theme .geo-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--accent);
+    border-color: var(--stroke-strong);
+  }
+  body.light-theme .seg button.active {
+    background: linear-gradient(135deg, rgba(29, 111, 227, 0.16), rgba(29, 111, 227, 0.04)) !important;
+    border-color: rgba(29, 111, 227, 0.45) !important;
+    color: var(--accent) !important;
+  }
+  body.light-theme .seg button:hover {
+    color: var(--accent);
+  }
+  body.light-theme .pp-grid {
+    background: var(--stroke-strong);
+  }
+  body.light-theme #sim-dash .btn {
+    background: rgba(0, 0, 0, 0.02);
+  }
+  body.light-theme #sim-dash .btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text);
+    border-color: var(--stroke-strong);
+  }
+
+  /* loading veil */
+  #veil{position:absolute;inset:0;z-index:3000;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#0c1430,#04060f);transition:opacity .6s ease, visibility .6s;}
+  #veil.gone{opacity:0;pointer-events:none;visibility:hidden;display:none !important;}
+  #veil .l{font-family:"Orbitron",sans-serif;letter-spacing:3px;color:#9fb0e0;font-size:13px;text-align:center;}
+  #veil .o{width:60px;height:60px;border:2px solid rgba(120,170,255,.25);border-top-color:var(--gold);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  @media (max-width:720px){
+    #inset{display:none;}
+    #topbar{top:auto;bottom:84px;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 12px;}
+    #topbar .meta .s{display:none;}
+    #legend{width:calc(100vw - 28px);}
+    .fab-stack{bottom:14px;}
+    .fab span{display:none;}
+    .fab{padding:11px;}
+  }
+
+  /* --- Simulation dashboard overlay --- */
+  #sim-dash{
+    position:absolute;bottom:24px;left:14px;z-index:1000;width:420px;max-width:calc(100vw - 28px);
+    background:var(--panel);backdrop-filter:blur(16px);
+    border:1px solid var(--stroke);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:14px;display:flex;flex-direction:column;gap:12px;
+    transition:opacity 0.25s ease, visibility 0.25s;
+  }
+  #sim-dash.hidden{opacity:0;pointer-events:none;visibility:hidden;display:none !important;}
+  #sim-dash .row{display:flex;align-items:center;justify-content:space-between;}
+  #sim-dash .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);white-space:nowrap;}
+  #sim-dash .val{font-family:"Orbitron",sans-serif;font-size:13px;font-weight:700;color:var(--gold);white-space:nowrap;}
+  #sim-dash .ctrls{display:flex;align-items:center;gap:8px;}
+  #sim-dash .btn{
+    background:rgba(255,255,255,0.02);border:1px solid var(--stroke);color:var(--text);
+    padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;
+    transition:0.18s;display:flex;align-items:center;gap:5px;outline:none;
+  }
+  #sim-dash .btn:hover{background:rgba(255,255,255,0.08);color:#fff;border-color:var(--stroke-strong);}
+  #sim-dash input[type="range"]{
+    flex:1;height:4px;border-radius:2px;background:var(--stroke);outline:none;
+    -webkit-appearance:none;cursor:pointer;
+  }
+  #sim-dash input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 6px var(--accent);transition:0.12s;
+  }
+  #sim-dash input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.25);}
+  
+  /* --- Orbit path interactive highlighting --- */
+  .leaflet-interactive{
+    transition:stroke-width 0.25s ease, stroke-opacity 0.25s ease, filter 0.25s ease;
+  }
+  .orbit-highlight{
+    stroke-width:3.5px !important;
+    stroke-opacity:0.95 !important;
+    filter:drop-shadow(0 0 5px var(--orb-color)) drop-shadow(0 0 2px var(--orb-color)) !important;
+  }
+
+  /* ---------- Setup Wizard ---------- */
+  #wizard-overlay{
+    position:fixed;inset:0;background:rgba(3,4,9,0.5);backdrop-filter:blur(10px);
+    z-index:4000;display:flex;align-items:center;justify-content:center;
+    transition:opacity .4s ease, visibility .4s;
+  }
+  #wizard-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none;display:none !important;}
+  #wizard-overlay.floating{
+    background:rgba(0,0,0,0);backdrop-filter:none;pointer-events:none;
+    justify-content:flex-end;align-items:flex-start;padding:14px;
+  }
+  .wizard-card{
+    background:var(--panel-solid);border:1px solid var(--stroke-strong);
+    border-radius:var(--radius);width:380px;max-width:calc(100vw - 28px);
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+    pointer-events:auto;transition:all 0.3s ease;
+  }
+  #wizard-overlay.floating .wizard-card{
+    margin-top:70px; /* shift down to avoid overlapping other panels */
+    border-color:rgba(90,166,255,0.45);
+    box-shadow:0 12px 40px rgba(0,0,0,0.7), 0 0 20px rgba(90,166,255,0.1);
+  }
+  .wizard-hd{
+    padding:14px 16px;border-bottom:1px solid var(--stroke);
+    display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.01);
+  }
+  .wizard-hd h2{
+    margin:0;font-family:"Orbitron",sans-serif;font-size:14px;
+    font-weight:700;letter-spacing:.5px;color:var(--gold);
+  }
+  .wizard-bd{padding:16px;flex:1;overflow-y:auto;max-height:55vh;}
+  .wizard-step{display:none;}
+  .wizard-step.active{display:block;}
+  .wizard-ft{
+    padding:12px 16px;border-top:1px solid var(--stroke);
+    display:flex;justify-content:space-between;gap:10px;
+    background:rgba(0,0,0,.15);
+  }
+  .wbtn{
+    padding:8px 14px;border-radius:8px;border:1px solid var(--stroke);
+    font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+    transition:.15s;background:rgba(255,255,255,.02);color:var(--text);
+  }
+  .wbtn:hover{background:rgba(255,255,255,.08);color:#fff;}
+  .wbtn.primary{
+    background:linear-gradient(135deg,var(--accent),#3d7fe0);
+    border-color:rgba(90,166,255,.45);color:#fff;
+  }
+  .wbtn.primary:hover{filter:brightness(1.15);box-shadow:0 0 10px rgba(90,166,255,.3);}
+  .wbtn:disabled{opacity:0.35;cursor:not-allowed;}
+  
+  .wizard-step p{margin:0 0 12px;font-size:11.5px;color:var(--muted);line-height:1.4;}
+  .search-row{display:flex;gap:8px;margin-bottom:10px;}
+  .search-row input{
+    flex:1;background:rgba(0,0,0,.35);border:1px solid var(--stroke);
+    border-radius:8px;color:#fff;padding:7px 10px;font-family:inherit;font-size:12px;
+  }
+  .search-row input:focus{border-color:var(--accent);outline:none;}
+  
+  .presets-lbl{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .preset-card{
+    background:rgba(255,255,255,.01);border:1px solid var(--stroke);
+    border-radius:10px;padding:10px;cursor:pointer;transition:.18s;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  .preset-card:hover{background:rgba(120,160,255,.06);border-color:var(--stroke-strong);}
+  .preset-card.active{
+    background:linear-gradient(135deg,rgba(90,166,255,.16),rgba(90,166,255,.04));
+    border-color:rgba(90,166,255,.55);box-shadow:0 0 10px rgba(90,166,255,.1);
+  }
+  .preset-card .p-name{font-weight:700;font-size:12px;color:var(--gold);}
+  .preset-card .p-val{font-size:10.5px;color:var(--text);font-variant-numeric:tabular-nums;}
+  .preset-card .p-desc{font-size:9.5px;color:var(--muted);line-height:1.2;margin-top:2px;}
+  
+  .custom-size-row{
+    display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;
+    border-top:1px solid var(--stroke);display:none;
+  }
+  .custom-size-row.show{display:flex;}
+  .custom-size-row input{
+    width:80px;background:rgba(0,0,0,.35);border:1px solid var(--stroke);
+    border-radius:8px;color:#fff;padding:6px 8px;font-family:inherit;font-size:12px;text-align:center;
+  }
+  .custom-size-row input:focus{border-color:var(--accent);outline:none;}
+  .custom-size-row span{font-size:11.5px;color:var(--text);}
+  
+  /* 3D view popup styles */
+  .pp-3d-box{
+    width:100%;height:160px;position:relative;background:#05070f;
+    border-bottom:1px solid var(--stroke);overflow:hidden;
+  }
+  .pp-3d-box model-viewer{
+    width:100%;height:100%;outline:none;
+  }
+  .pp-3d-title{
+    position:absolute;bottom:0;left:0;right:0;padding:12px 14px;
+    background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%);
+    pointer-events:none;z-index:10;
+  }
+  .pp-3d-title h2{margin:0;font-family:"Orbitron",sans-serif;font-size:18px;font-weight:700;letter-spacing:.4px;line-height:1;color:#fff;}
+  .pp-3d-title .sub{margin-top:4px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
+  .pp-3d-title .sub .am{color:#bcd0ff;}
+
+  /* Wizard GPS button & location status styling */
+  .geo-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--stroke);
+    background: rgba(255,255,255,0.02);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    margin: 8px 0 12px;
+  }
+  .geo-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border-color: var(--stroke-strong);
+  }
+  .geo-btn svg {
+    opacity: 0.85;
+    flex: none;
+  }
+  .loc-status {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+  .loc-status b {
+    color: var(--text);
+  }
+
+  /* Disable starfield overlay in light mode or satellite view to maintain realism */
+  body.light-theme #map::after,
+  body.satellite-view #map::after {
+    opacity: 0 !important;
+    visibility: hidden;
+  }
+
+  /* Close buttons inside panels */
+  .panel-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--stroke);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    color: var(--muted);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.15s ease;
+  }
+  .panel-close-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+    border-color: var(--stroke-strong);
+  }
+  body.light-theme .panel-close-btn {
+    background: rgba(0, 0, 0, 0.03);
+  }
+  body.light-theme .panel-close-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+  }
+
+  /* Round floating open buttons */
+  .fab-round {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--panel);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--stroke);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    display: grid;
+    place-items: center;
+    outline: none;
+    z-index: 1000;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s, border-color 0.15s;
+  }
+  .fab-round:hover {
+    border-color: var(--stroke-strong);
+    transform: scale(1.05);
+  }
+  .fab-round.hidden-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8);
+    visibility: hidden;
+  }
+
+  /* Panel collapse/minimize transitions */
+  #legend {
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s, max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top left;
+    max-height: calc(100vh - 150px);
+  }
+  body.sim-minimized #legend {
+    max-height: calc(100vh - 90px);
+  }
+  #legend.collapsed {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85) translate(-15px, -15px);
+    visibility: hidden;
+  }
+
+  #sim-dash {
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+    transform-origin: bottom left;
+  }
+  #sim-dash.minimized {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85) translate(-15px, 15px);
+    visibility: hidden;
+  }
+
+  #inset {
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.25s;
+    transform-origin: top right;
+  }
+  #inset.minimized {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85) translate(15px, -15px);
+    visibility: hidden;
+  }
+
+  /* Shift zoom controls upward to clear the simulation dashboard card */
+  .leaflet-bottom.leaflet-left {
+    margin-bottom: 120px;
+    margin-left: 6px;
+    transition: margin-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body.sim-minimized .leaflet-bottom.leaflet-left {
+    margin-bottom: 76px;
+  }
+
+  /* Make orbit paths highly visible in Satellite View */
+  body.satellite-view path[class*="orbit-"] {
+    stroke-width: 2.8px !important;
+    stroke-opacity: 0.95 !important;
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.95)) !important;
+  }
+  body.satellite-view path.orbit-highlight {
+    stroke-width: 4.5px !important;
+    stroke-opacity: 1.0 !important;
+    filter: drop-shadow(0 0 6px var(--orb-color)) drop-shadow(0 0 2px var(--orb-color)) !important;
+  }
+
+  /* Light theme open buttons */
+  body.light-theme .fab-round {
+    background: var(--panel);
+    border-color: var(--stroke);
+  }
+  body.light-theme .fab-round:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: var(--stroke-strong);
+  }
+
+  /* Planet Detail Popup readability fixes in Light Mode */
+  body.light-theme .leaflet-popup-content-wrapper {
+    background: var(--panel-solid) !important;
+    color: var(--text) !important;
+    box-shadow: var(--shadow) !important;
+  }
+  body.light-theme .pp-walk b {
+    color: var(--text) !important;
+  }
+  body.light-theme .pp-lmk b {
+    color: var(--accent) !important;
+  }
+  body.light-theme .pp-lmk svg {
+    stroke: var(--muted) !important;
+  }
+
+  /* Enhance main map orbit visibility in Light Mode */
+  body.light-theme path[class*="orbit-"] {
+    stroke-width: 2.3px !important;
+    stroke-opacity: 0.85 !important;
+    filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.35)) !important;
+  }
+  body.light-theme path.orbit-highlight {
+    stroke-width: 4.0px !important;
+    stroke-opacity: 1.0 !important;
+    filter: drop-shadow(0 0 3px var(--orb-color)) drop-shadow(0 0.5px 1.5px rgba(0, 0, 0, 0.4)) !important;
+  }
+  body.light-theme path.orbit-moon {
+    stroke: rgba(18, 22, 42, 0.35) !important;
+    stroke-width: 1.4px !important;
+    stroke-opacity: 0.75 !important;
+  }
+
+  /* Mini-map styling */
+  .inset-planet-dot {
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  }
+  .inset-planet-dot:hover, .inset-planet-dot.highlighted {
+    transform: scale(1.6) !important;
+    box-shadow: 0 0 10px 3px currentColor !important;
+    border-color: #fff !important;
+    z-index: 1000;
+  }
+  .inset-tooltip {
+    background: var(--panel-solid) !important;
+    border: 1px solid var(--stroke-strong) !important;
+    color: var(--text) !important;
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    box-shadow: var(--shadow) !important;
+  }
+  .leaflet-tooltip-top.inset-tooltip::before {
+    border-top-color: var(--panel-solid) !important;
+  }
+
+  /* Glowing animated ruler line */
+  .active-ruler-line {
+    filter: drop-shadow(0 0 4px var(--ruler-color)) drop-shadow(0 0 1px var(--ruler-color));
+    stroke-dasharray: 8, 12;
+    animation: rulerDash 30s linear infinite;
+  }
+  @keyframes rulerDash {
+    to {
+      stroke-dashoffset: -1000;
+    }
+  }
+
+  /* Premium glassmorphic space region badges */
+  .region-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(11, 16, 34, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s, border-color 0.2s;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+  }
+  .region-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    transition: transform 0.2s;
+  }
+  .region-badge:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  .region-badge:hover .region-badge-icon {
+    transform: scale(1.15);
+  }
+  .region-badge-pulse {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    animation: regionBadgePulse 2s infinite ease-in-out;
+  }
+  @keyframes regionBadgePulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.25); }
+  }
+</style>
+  <script src="translations.js"></script>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Inset mini-map: how far the system extends beyond the city -->
+<div id="inset">
+  <button class="panel-close-btn" id="btnInsetClose" title="Collapse Mini-map">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <div id="insetmap"></div>
+  <div class="cap" id="insetCap"><b>Neptune</b> reaches <b>450 km</b> out · beyond Addis</div>
+</div>
+<button class="fab-round hidden-btn" id="btnInsetOpen" title="Show Mini-map" style="position:absolute; top:14px; right:14px; z-index:1000;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" width="20" height="20"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+</button>
+
+<!-- Top info bar -->
+<div id="topbar">
+  <div class="badge">
+    <span class="sunchip"></span>
+    <b id="scaleRatio">1 : 10,000,000</b>
+  </div>
+  <div class="meta">
+    <span class="k" id="scaleDesc" data-i18n="scaleLabel">Scale&nbsp; 1&nbsp;cm = 100&nbsp;km</span>
+    <span class="s" data-i18n="sunLocation">☀ Sun sits at ESSS Office, AAU CTBE 5 Kilo</span>
+  </div>
+</div>
+
+<!-- Legend / control panel -->
+<aside id="legend">
+  <div class="hd" id="legendHd" title="Collapse Panel">
+    <div class="logo">
+      <span class="o o1"></span><span class="o o2"></span><span class="sun"></span>
+    </div>
+    <div class="ttl">
+      <h1 data-i18n="panelTitle">ESSS Solar Walk</h1>
+      <p class="am" data-i18n="panelSubtitle">የፀሐይ ሥርዓት ጉዞ · Addis Ababa</p>
+    </div>
+    <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+  </div>
+  <div class="body">
+    <div class="seg" id="viewSeg">
+      <button data-view="inner" class="active" data-i18n="innerPlanets">Inner planets</button>
+      <button data-view="all" data-i18n="showAllOrbits">Show all orbits</button>
+    </div>
+    <div class="plist" id="plist"></div>
+    <div class="widget">
+      <h3 data-i18n="walkTitle">Walk the system</h3>
+      <div class="big" id="walkBig" data-i18n="walkTime">3 days, 18 hrs</div>
+      <p data-i18n-html="walkDesc">Strolling at <b>5 km/h</b>, that's how long from the <b>Sun</b> to <b>Neptune</b> across this map — <b id="walkDist">450 km</b> of orbits, all flattened over Ethiopia.</p>
+      <p style="margin-top:8px;font-size:9.5px;color:var(--muted);border-top:1px solid var(--stroke);padding-top:6px;margin-bottom:0;line-height:1.35;" data-i18n-html="shortcuts">
+        💡 <b>Shortcuts:</b> [Space] Play/Pause · [R] Reset · [F] Frame · [1-9] Fly to Planet
+      </p>
+    </div>
+  </div>
+</aside>
+<button class="fab-round hidden-btn" id="btnLegendOpen" title="Show Control Panel" style="position:absolute; top:14px; left:14px; z-index:1000;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.2" width="20" height="20"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<!-- Floating actions -->
+<div class="fab-stack">
+  <button class="fab" id="fabMapToggle">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="mapIcon"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+    <span id="mapIconText" data-i18n="satelliteView">Satellite View</span>
+  </button>
+  <button class="fab" id="fabTheme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <span id="themeText" data-i18n="lightMode">Light Mode</span>
+  </button>
+  <button class="fab" id="fabSetup">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <span data-i18n="configureSun">Configure Sun</span>
+  </button>
+  <button class="fab" id="fabReset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span data-i18n="resetView">Reset view</span>
+  </button>
+  <button class="fab" id="fabFit">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    <span data-i18n="frameAll">Frame all orbits</span>
+  </button>
+  <button class="fab" id="fabLang">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/></svg>
+    <span data-i18n="language">አማርኛ</span>
+  </button>
+</div>
+
+<!-- Setup Wizard Modal -->
+<div id="wizard-overlay" class="hidden">
+  <div class="wizard-card">
+    <div class="wizard-hd">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <h2 data-i18n="wizardTitle">Solar System Walk Setup</h2>
+      <button class="wbtn" id="wizClose" style="margin-left:auto; padding:4px 8px; font-size:18px; line-height:1; border:none; background:transparent; color:var(--muted); cursor:pointer;" title="Close">&times;</button>
+    </div>
+    <div class="wizard-bd">
+      <!-- Step 1: Place the Sun -->
+      <div class="wizard-step active" id="step1">
+        <p><b data-i18n="step1Title">Step 1: Place the Sun</b><br><span data-i18n="step1Desc">Click anywhere on the map behind to place the center of the solar system, or search below:</span></p>
+        <div class="search-row">
+          <input type="text" id="wizSearch" placeholder="Enter a city or address..." data-i18n-placeholder="searchPlaceholder" />
+          <button class="wbtn" id="wizSearchBtn" data-i18n="searchBtn">Search</button>
+        </div>
+        <button class="geo-btn" id="wizGPSBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a10 10 0 00-10 10c0 5.25 10 10 10 10s10-4.75 10-10a10 10 0 00-10-10z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span data-i18n="useMyLocation">Use my current location</span>
+        </button>
+        <div id="wizLocStatus" class="loc-status" data-i18n-html="sunDefault">Sun is set to: <b>Addis Ababa (Default)</b></div>
+      </div>
+      
+      <!-- Step 2: Choose Size -->
+      <div class="wizard-step" id="step2">
+        <p><b data-i18n="step2Title">Step 2: Choose the Sun's Size</b><br><span data-i18n="step2Desc">Pick the scale of your system. Orbits and planet sizes will automatically recalculate relative to the Sun's diameter.</span></p>
+        <div class="presets-lbl" data-i18n="selectPreset">Select a diameter preset</div>
+        <div class="preset-grid">
+          <div class="preset-card active" data-val="1.0" data-name="1 Meter Ball" data-desc="1 cm = 14 km">
+            <span class="p-name" data-i18n="preset1MeterName">1 Meter Ball</span>
+            <span class="p-val" data-i18n="preset1MeterVal">1 m</span>
+            <span class="p-desc" data-i18n="preset1MeterDesc">Neptune reaches 3,230 km out.</span>
+          </div>
+          <div class="preset-card" data-val="0.14" data-name="Grapefruit" data-desc="1 cm = 100 km (Addis Ababa size)">
+            <span class="p-name" data-i18n="presetGrapefruitName">Grapefruit</span>
+            <span class="p-val" data-i18n="presetGrapefruitVal">14 cm</span>
+            <span class="p-desc" data-i18n="presetGrapefruitDesc">Neptune fits within 450 km. (Original)</span>
+          </div>
+          <div class="preset-card" data-val="0.60" data-name="Beach ball" data-desc="1 cm = 23 km">
+            <span class="p-name" data-i18n="presetBeachBallName">Beach Ball</span>
+            <span class="p-val" data-i18n="presetBeachBallVal">60 cm</span>
+            <span class="p-desc" data-i18n="presetBeachBallDesc">Neptune reaches 1,940 km out.</span>
+          </div>
+          <div class="preset-card" data-val="0.24" data-name="Basketball" data-desc="1 cm = 58 km">
+            <span class="p-name" data-i18n="presetBasketballName">Basketball</span>
+            <span class="p-val" data-i18n="presetBasketballVal">24 cm</span>
+            <span class="p-desc" data-i18n="presetBasketballDesc">Neptune reaches 780 km out.</span>
+          </div>
+          <div class="preset-card" data-val="0.067" data-name="Tennis ball" data-desc="1 cm = 208 km">
+            <span class="p-name" data-i18n="presetTennisBallName">Tennis Ball</span>
+            <span class="p-val" data-i18n="presetTennisBallVal">6.7 cm</span>
+            <span class="p-desc" data-i18n="presetTennisBallDesc">Neptune reaches 216 km out.</span>
+          </div>
+          <div class="preset-card" data-val="0.016" data-name="Marble" data-desc="1 cm = 870 km">
+            <span class="p-name" data-i18n="presetMarbleName">Marble</span>
+            <span class="p-val" data-i18n="presetMarbleVal">1.6 cm</span>
+            <span class="p-desc" data-i18n="presetMarbleDesc">Neptune reaches 52 km out.</span>
+          </div>
+          <div class="preset-card" data-val="custom" data-name="Custom" data-desc="Enter your own size">
+            <span class="p-name" data-i18n="presetCustomName">Custom...</span>
+            <span class="p-val" data-i18n="presetCustomVal">Custom</span>
+            <span class="p-desc" data-i18n="presetCustomDesc">Define a custom diameter.</span>
+          </div>
+        </div>
+        <div class="custom-size-row" id="wizCustomRow">
+          <span data-i18n="sunDiameter">Sun Diameter:</span>
+          <input type="number" id="wizCustomVal" value="1.0" min="0.001" step="0.001" style="width: 80px;" />
+          <select id="wizCustomUnit" class="wbtn" style="padding: 4px; border-radius: 6px;">
+            <option value="m" selected data-i18n="meters">meters</option>
+            <option value="cm" data-i18n="unitCm">cm</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="wizard-ft">
+      <button class="wbtn" id="wizBack" disabled data-i18n="back">Back</button>
+      <div style="display:flex;gap:8px;">
+        <button class="wbtn" id="wizSkip" style="color:var(--muted);" data-i18n="useDefaults">Use Defaults</button>
+        <button class="wbtn primary" id="wizNext" data-i18n="next">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading veil -->
+<div id="veil"><div><div class="o"></div><div class="l" data-i18n="enteringOrbit">ENTERING ORBIT…</div></div></div>
+
+<!-- Simulation dashboard overlay -->
+<div id="sim-dash" class="hidden">
+  <button class="panel-close-btn" id="btnSimClose" title="Collapse Dashboard">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <div class="row" style="margin-right: 20px;">
+    <span class="lbl" data-i18n="simTime">Simulation Time</span>
+    <span class="val" id="simDate">Day 0</span>
+  </div>
+  <div class="row">
+    <div class="ctrls">
+      <button class="btn" id="simPlayBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" id="simPlayIcon" style="display: block; margin-top: 1px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <span id="simPlayText">Play</span>
+      </button>
+    </div>
+    <input type="range" id="simSpeedRange" min="0" max="6" step="1" value="2" style="margin: 0 10px;" />
+    <span class="val" id="simSpeedVal" style="font-size: 11px; margin-left: 8px; width: 85px; text-align: right; white-space: nowrap;">1 day/sec</span>
+  </div>
+</div>
+<button class="fab-round hidden-btn" id="btnSimOpen" title="Show Simulation Controls" style="position:absolute; bottom:24px; left:14px; z-index:1000;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.2" width="20" height="20"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="var(--gold)"/></svg>
+</button>
+
+<script>
+/* =====================================================================
+   ESSS Solar System Walk — scale model over Addis Ababa
+   Scale 1 : 10,000,000  (1 cm on map = 100 km in space)
+   Orbits are true ellipses with the Sun at one focus.
+   ===================================================================== */
+
+// --- The Sun: ESSS Office at AAU CTBE 5 Kilo ---
+let SUN = { lat: 9.0408, lng: 38.7627 };
+
+// Scale factor: real km -> map km  (Default: Sun is 1 Meter, 1 : 1,392,000,000)
+let SCALE = 1.0 / (1392000 * 1000);
+
+/* Planet data — semi-major axes in million km, diameters in km.
+   ecc = orbital eccentricity, perihelion = bearing (deg) of closest approach on map.
+   angle = bearing (deg) for planet placement. color = body hue.               */
+const PLANETS = [
+  { key:"mercury", color:"#9fa4ad", glow:"#c4c8d0",
+    realKm:57.9,  diameter:4879,   moons:0, periodDays: 87.97,
+    ecc:0.2056, perihelion:77,
+    angle:48,  size:36 },
+  { key:"venus",   color:"#e7b35c", glow:"#ffd27a",
+    realKm:108.2, diameter:12104,  moons:0, periodDays: 224.70,
+    ecc:0.0068, perihelion:131,
+    angle:118, size:40 },
+  { key:"earth",   color:"#4f9ee0", glow:"#7ec3ff",
+    realKm:149.6, diameter:12742,  moons:1, periodDays: 365.25,
+    ecc:0.0167, perihelion:103,
+    angle:205, size:42 },
+  { key:"mars",    color:"#d65a3a", glow:"#ff7a52",
+    realKm:227.9, diameter:6779,   moons:2, periodDays: 686.98,
+    ecc:0.0934, perihelion:336,
+    angle:312, size:38 },
+  { key:"jupiter", color:"#d9a26b", glow:"#ffc98c",
+    realKm:778.6, diameter:142984, moons:101, periodDays: 4332.59,
+    ecc:0.0489, perihelion:15,
+    angle:28,  size:56 },
+  { key:"saturn",  color:"#e3d29a", glow:"#fff0bd",
+    realKm:1433.5,diameter:120536, moons:285, periodDays: 10759.22,
+    ecc:0.0565, perihelion:92,
+    angle:158, size:52, ring:true },
+  { key:"uranus",  color:"#8fe3e8", glow:"#b6f4f8",
+    realKm:2872.5,diameter:50724,  moons:28, periodDays: 30688.50,
+    ecc:0.0457, perihelion:171,
+    angle:250, size:46 },
+  { key:"neptune", color:"#4f6fd9", glow:"#7e98ff",
+    realKm:4495.1,diameter:49244,  moons:16, periodDays: 60182.00,
+    ecc:0.0113, perihelion:45,
+    angle:342, size:46 },
+  { key:"pluto",   color:"#c2a07a", glow:"#e3c69e",
+    realKm:5906.4,diameter:2377,   moons:5,  periodDays: 90560.00,
+    ecc:0.2488, perihelion:224,
+    angle:95,  size:28, dwarf:true },
+];
+
+// Compute mapKm (semi-major axis on map in km) from real data and scale
+PLANETS.forEach(p => { p.mapKm = p.realKm * 1e6 * SCALE; });
+
+// Compute icon sizes relative to actual planet diameters
+// Uses a power scale so gas giants are visibly larger than rocky planets
+function computeIconSize(diameterKm) {
+  const MIN = 18, MAX = 58;
+  const maxDiam = 142984; // Jupiter (largest planet)
+  return Math.round(MIN + (MAX - MIN) * Math.pow(diameterKm / maxDiam, 0.5));
+}
+PLANETS.forEach(p => { p.size = computeIconSize(p.diameter); });
+const SUN_ICON_SIZE = 66; // Sun is visually largest
+
+// =====================================================================
+// I18N — Internationalization Dictionary
+// =====================================================================
+const urlParams = new URLSearchParams(window.location.search);
+let currentLang = urlParams.get('lang') || localStorage.getItem('esss-lang') || 'en';
+
+// Translation helper — looks up a key in the current language, falls back to English
+function t(key) {
+  return (I18N[currentLang] && I18N[currentLang][key]) || I18N['en'][key] || key;
+}
+
+// Apply language to all static [data-i18n] elements and refresh dynamic text
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('esss-lang', lang);
+  document.documentElement.lang = lang === 'am' ? 'am' : 'en';
+  document.body.classList.toggle('lang-am', lang === 'am');
+
+  // Update all static data-i18n elements (textContent)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  // Update all data-i18n-html elements (innerHTML)
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  });
+  // Update all data-i18n-placeholder elements
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+
+  // Fix stateful toggle text (theme and map buttons depend on current state)
+  const themeText = document.getElementById('themeText');
+  if (themeText) themeText.textContent = isLightTheme ? t('darkMode') : t('lightMode');
+  const mapIconText = document.getElementById('mapIconText');
+  if (mapIconText) mapIconText.textContent = isSatellite ? t('vectorMap') : t('satelliteView');
+  const simPlayText = document.getElementById('simPlayText');
+  if (simPlayText) simPlayText.textContent = simRunning ? t('pause') : t('play');
+  const wizNextEl = document.getElementById('wizNext');
+  if (wizNextEl) {
+    wizNextEl.textContent = (typeof currentStep !== 'undefined' && currentStep === 2) ? t('launchWalk') : t('nextStep');
+  }
+
+  // Update dynamic localized scale and walk stats
+  updateScaleDisplay();
+  updateSunLocationDisplay();
+  updateWalkDisplay();
+
+  // Rebuild speed label
+  const speedRangeEl = document.getElementById("simSpeedRange");
+  if (speedRangeEl) {
+    speedRangeEl.dispatchEvent(new Event('input'));
+  }
+
+  // Rebuild sim elapsed time if paused
+  const simDateEl = document.getElementById("simDate");
+  if (simDateEl) {
+    simDateEl.textContent = t('epoch').replace('{time}', formatElapsedDays(simDays));
+  }
+
+  // Rebuild planet popups
+  rebuildPopups();
+
+
+
+  // Rebuild marker icons with correct language label
+  if (typeof sunMarker !== 'undefined' && sunMarker) {
+    sunMarker.setIcon(L.divIcon({
+      className:"sun-ico", iconSize:[SUN_ICON_SIZE, SUN_ICON_SIZE], iconAnchor:[SUN_ICON_SIZE/2, SUN_ICON_SIZE/2],
+      html: getSunIconHtml(),
+    }));
+  }
+
+  PLANETS.forEach(p => {
+    if (planetMarkers[p.key]) {
+      planetMarkers[p.key].setIcon(L.divIcon({
+        className:"planet-ico",
+        iconSize:[p.size, p.size],
+        iconAnchor:[p.size/2, p.size/2],
+        html: getPlanetIconHtml(p),
+      }));
+    }
+  });
+
+  if (typeof moonMarker !== 'undefined' && moonMarker) {
+    const moonData = {
+      key: "moon", color: "#c4c8d0", glow: "#ffffff",
+      realKm: 0.3844, diameter: 3474, moons: 0,
+      ecc: 0.0549, size: computeIconSize(3474)
+    };
+    moonMarker.setIcon(L.divIcon({
+      className: "planet-ico",
+      iconSize: [moonData.size, moonData.size],
+      iconAnchor: [moonData.size / 2, moonData.size / 2],
+      html: getPlanetIconHtml(moonData),
+    }));
+  }
+
+  // Rebuild legend planet names
+  const plistEl = document.getElementById('plist');
+  if (plistEl) {
+    plistEl.querySelectorAll('.prow').forEach(row => {
+      const key = row.dataset.key;
+      const p = PLANETS.find(pl => pl.key === key);
+      if (p) {
+        const nmEl = row.querySelector('.nm');
+        if (nmEl) {
+          const displayName = t('planet_' + p.key);
+          const badgeAttr = p.dwarf ? ` data-badge="${t('dwarf')}"` : "";
+          nmEl.innerHTML = `<b${badgeAttr}>${displayName}</b>`;
+        }
+        const kmEl = row.querySelector('.km');
+        if (kmEl) {
+          kmEl.textContent = p.mapKm < 1 ? `${(p.mapKm * 1000).toFixed(0)} ${t('unitM')}` : `${p.mapKm.toFixed(1)} ${t('unitKm')}`;
+        }
+      }
+    });
+  }
+
+  
+  // Rebuild region markers and popups
+  REGIONS.forEach(r => {
+    if (regionMarkers[r.key]) {
+      regionMarkers[r.key].setPopupContent(regionPopupHtml(r));
+      const badgeStyle = `border: 1px solid ${r.color}40; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 8px ${r.color}15, inset 0 0 6px ${r.color}15;`;
+      const iconStyle = `background: ${r.color}18; border: 1px solid ${r.color}35; text-shadow: 0 0 4px ${r.color};`;
+      const pulseStyle = `background: ${r.color}; box-shadow: 0 0 6px ${r.color};`;
+      const emoji = r.key === 'asteroid' ? '☄️' : (r.key === 'kuiper' ? '❄️' : '☁️');
+
+      regionMarkers[r.key].setIcon(L.divIcon({
+        className: "",
+        iconSize: [0, 0],
+        html: `<div class="region-badge" style="${badgeStyle}">
+                 <span class="region-badge-icon" style="${iconStyle}">${emoji}</span>
+                 ${t('region_' + r.key)}
+                 <span class="region-badge-pulse" style="${pulseStyle}"></span>
+               </div>`
+      }));
+    }
+  });
+
+  // Rebuild legend region names and ranges
+  const regHeader = document.getElementById("legendRegionsHeader");
+  if (regHeader) regHeader.textContent = t('legendRegions');
+  REGIONS.forEach(r => {
+    const row = plistEl.querySelector(`.prow[data-key="${r.key}"]`);
+    if (row) {
+      const nmEl = row.querySelector('.nm');
+      if (nmEl) nmEl.innerHTML = `<b>${t('region_' + r.key)}</b>`;
+      const kmEl = row.querySelector('.km');
+      if (kmEl) kmEl.textContent = getRegionRangeMapStr(r);
+    }
+  });
+
+  // Update tooltips for the mini-map
+  if (typeof insetSunMarker !== 'undefined' && insetSunMarker) {
+    insetSunMarker.setTooltipContent(t('theSun'));
+  }
+  PLANETS.forEach(p => {
+    if (insetPlanetMarkers[p.key]) {
+      const displayName = t('planet_' + p.key);
+      insetPlanetMarkers[p.key].setTooltipContent(displayName);
+    }
+  });
+
+  // Refresh map layers to update localized license attribution in the footer
+  if (typeof map !== 'undefined' && map) {
+    updateMapLayer();
+  }
+}
+
+// Helpers for dynamic localized text
+function updateScaleDisplay() {
+  const cmInSpaceKm = (0.01 / SCALE) / 1000;
+  const scaleDescEl = document.getElementById("scaleDesc");
+  if (scaleDescEl) {
+    if (cmInSpaceKm >= 1) {
+      const valStr = Math.round(cmInSpaceKm).toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US');
+      scaleDescEl.innerHTML = t('scaleFormatKm').replace('{val}', valStr);
+    } else {
+      const valStr = Math.round(cmInSpaceKm * 1000).toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US');
+      scaleDescEl.innerHTML = t('scaleFormatMeters').replace('{val}', valStr);
+    }
+  }
+}
+
+function updateSunLocationDisplay() {
+  const el = document.querySelector("#topbar .meta .s");
+  if (!el) return;
+  const isDefault = Math.abs(SUN.lat - 9.0408) < 1e-5 && Math.abs(SUN.lng - 38.7627) < 1e-5;
+  if (isDefault) {
+    el.textContent = t('sunLocation');
+  } else {
+    el.textContent = t('sunSitsAt').replace('{lat}', SUN.lat.toFixed(4)).replace('{lng}', SUN.lng.toFixed(4));
+  }
+}
+
+function updateWalkDisplay() {
+  const neptuneData = PLANETS.find(p=>p.key==="neptune");
+  if (!neptuneData) return;
+  const mapKm = neptuneData.mapKm;
+  const hours = mapKm / 5;
+
+  let walkBigStr = "";
+  let walkDistStr = "";
+  let distText = "";
+  let scopeStr = "";
+  let capDist = "";
+  let capScope = "";
+
+  if (mapKm < 1) {
+    const meters = Math.round(mapKm * 1000);
+    const minutes = Math.round(hours * 60);
+    walkBigStr = `${minutes} ${t('unitMins')}`;
+    walkDistStr = `${meters} ${t('unitMeters')}`;
+    distText = `${meters} ${t('unitMeters')}`;
+    scopeStr = t('scopeAAU');
+    capDist = `${meters} ${t('unitM')}`;
+    capScope = t('insetScopeAAU');
+  } else {
+    const d = Math.floor(hours/24), h = Math.round(hours%24);
+    const dayLabel = t('unitDays');
+    const hrLabel = t('unitHrs');
+    walkBigStr = d > 0 ? `${d} ${dayLabel}, ${h} ${hrLabel}` : `${h} ${hrLabel}`;
+    walkDistStr = `${Math.round(mapKm)} ${t('unitKm')}`;
+    distText = `${Math.round(mapKm)} ${t('unitKm')}`;
+    scopeStr = mapKm < 40 ? t('scopeAddis') : t('scopeEthiopia');
+    capDist = `${Math.round(mapKm)} ${t('unitKm')}`;
+    capScope = mapKm < 40 ? t('insetScopeAddis') : t('insetScopeBeyond');
+  }
+
+  const walkBigEl = document.getElementById("walkBig");
+  if (walkBigEl) walkBigEl.textContent = walkBigStr;
+
+  const walkDistEl = document.getElementById("walkDist");
+  if (walkDistEl) walkDistEl.textContent = walkDistStr;
+
+  const walkDescEl = document.querySelector(".widget p");
+  if (walkDescEl) {
+    walkDescEl.innerHTML = t('walkDescTemplate')
+      .replace('{dist}', distText)
+      .replace('{scope}', scopeStr);
+  }
+
+  const insetCap = document.getElementById("insetCap");
+  if (insetCap) {
+    insetCap.innerHTML = t('insetCapTemplate')
+      .replace('{dist}', capDist)
+      .replace('{scope}', capScope);
+  }
+}
+
+// Rebuild all open popups with current language
+function rebuildPopups() {
+  // Rebuild Sun popup
+  if (typeof sunMarker !== 'undefined' && sunMarker) {
+    sunMarker.setPopupContent(sunPopupHtml());
+  }
+  // Rebuild planet popups
+  PLANETS.forEach(p => {
+    if (planetMarkers[p.key]) {
+      planetMarkers[p.key].setPopupContent(popupHtml(p));
+    }
+  });
+  // Rebuild Moon popup
+  if (typeof moonMarker !== 'undefined' && moonMarker) {
+    const earthP = PLANETS.find(pl => pl.key === 'earth');
+    const moonData = {
+      key: "moon", color: "#c4c8d0", glow: "#ffffff",
+      realKm: 0.3844, diameter: 3474, moons: 0,
+      ecc: 0.0549, size: computeIconSize(3474)
+    };
+    moonMarker.setPopupContent(moonPopupHtml(moonData, earthP));
+  }
+}
+
+
+// ---------- helpers ----------
+const R_EARTH = 6371; // km
+function destination(lat, lng, distKm, bearingDeg){
+  const br = bearingDeg * Math.PI/180, d = distKm / R_EARTH;
+  const φ1 = lat*Math.PI/180, λ1 = lng*Math.PI/180;
+  const φ2 = Math.asin(Math.sin(φ1)*Math.cos(d) + Math.cos(φ1)*Math.sin(d)*Math.cos(br));
+  const λ2 = λ1 + Math.atan2(Math.sin(br)*Math.sin(d)*Math.cos(φ1), Math.cos(d) - Math.sin(φ1)*Math.sin(φ2));
+  return [φ2*180/Math.PI, ((λ2*180/Math.PI)+540)%360 - 180];
+}
+function fmtKm(km){
+  const suffix = " " + t('unitKm');
+  if (km >= 1e6) return (km/1e6).toFixed(2) + (currentLang === 'am' ? " ሚሊዮን " : " M ") + t('unitKm');
+  if (km >= 1000) return km.toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US') + suffix;
+  return km + suffix;
+}
+// scaled diameter (real km -> map metres/cm)
+function scaledDiameter(realKm){
+  const m = realKm * SCALE * 1000; // metres on the map
+  if (m >= 1) return m.toFixed(1) + " " + t('unitM');
+  if (m >= 0.01) return (m*100).toFixed(1) + " " + t('unitCm');
+  return (m*1000).toFixed(2) + " " + t('unitMm');
+}
+
+function isWithinAddis(coords) {
+  return Math.abs(coords.lat - 9.0408) < 0.45 && Math.abs(coords.lng - 38.7627) < 0.45;
+}
+
+function getComparableObject(diameterMeters) {
+  const mm = diameterMeters * 1000;
+  let sizeStr = "";
+  if (diameterMeters >= 1) sizeStr = diameterMeters.toFixed(1) + " " + t('unitM');
+  else if (diameterMeters >= 0.01) sizeStr = (diameterMeters * 100).toFixed(1) + " " + t('unitCm');
+  else sizeStr = (diameterMeters * 1000).toFixed(2) + " " + t('unitMm');
+
+  if (mm < 0.1) return `${t('comp_dust')} ${sizeStr})`;
+  if (mm < 0.3) return `${t('comp_sand')} (${sizeStr})`;
+  if (mm < 1.0) return `${t('comp_salt')} (${sizeStr})`;
+  if (mm < 2.0) return `${t('comp_mustard')} (${sizeStr})`;
+  if (mm < 4.0) return `${t('comp_sesame')} (${sizeStr})`;
+  if (mm < 7.0) return `${t('comp_pepper')} (${sizeStr})`;
+  if (mm < 12.0) return `${t('comp_pea')} (${sizeStr})`;
+  if (mm < 20.0) return `${t('comp_blueberry')} (${sizeStr})`;
+  if (mm < 30.0) return `${t('comp_cherry')} (${sizeStr})`;
+  if (mm < 50.0) return `${t('comp_pingpong')} (${sizeStr})`;
+  if (mm < 80.0) return `${t('comp_tennis')} (${sizeStr})`;
+  if (mm < 120.0) return `${t('comp_baseball')} (${sizeStr})`;
+  if (mm < 200.0) return `${t('comp_grapefruit')} (${sizeStr})`;
+  if (mm < 300.0) return `${t('comp_basketball')} (${sizeStr})`;
+  if (mm < 500.0) return `${t('comp_beachball')} (${sizeStr})`;
+  return `${t('comp_sphere')} (${sizeStr})`;
+}
+
+// Elliptical orbit: distance from focus (Sun) at a given map bearing
+function orbitRadiusAtAngle(semiMajorKm, ecc, perihelionBearing, bearingDeg){
+  const theta = (bearingDeg - perihelionBearing) * Math.PI / 180;
+  return semiMajorKm * (1 - ecc * ecc) / (1 + ecc * Math.cos(theta));
+}
+
+// Generate lat/lng points tracing an elliptical orbit (Sun at one focus)
+function ellipseOrbitPoints(sunLat, sunLng, semiMajorKm, ecc, perihelionBearing, nPoints){
+  nPoints = nPoints || 360;
+  const pts = [];
+  for (let i = 0; i <= nPoints; i++){
+    const bearing = (360 * i) / nPoints;
+    const r = orbitRadiusAtAngle(semiMajorKm, ecc, perihelionBearing, bearing);
+    pts.push(destination(sunLat, sunLng, r, bearing));
+  }
+  return pts;
+}
+
+// ---------- map ----------
+const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const SATELLITE_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const SAT_ATTR = 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community';
+
+const map = L.map("map", {
+  center:[SUN.lat, SUN.lng], zoom:12, minZoom:6, maxZoom:24,
+  zoomControl:false, attributionControl:true,
+});
+let currentTileLayer = L.tileLayer(DARK_TILES, { attribution:TILE_ATTR, subdomains:"abcd", maxZoom:24, maxNativeZoom:19, zIndex: 1 }).addTo(map);
+let currentLabelsLayer = null;
+let isLightTheme = false;
+let isSatellite = false;
+L.control.zoom({ position:"bottomleft" }).addTo(map);
+
+const HOME = { center:[SUN.lat, SUN.lng], zoom:12 };
+
+// ---------- orbit rings + planet markers ----------
+const orbitLayers = {}, planetMarkers = {};
+const regionLayers = {}, regionMarkers = {};
+const insetRegionLayers = {};
+const insetOrbitLayers = {}, insetPlanetMarkers = {};
+const planetGroup = L.layerGroup().addTo(map);
+const orbitGroup  = L.layerGroup().addTo(map);
+const regionGroup = L.layerGroup().addTo(map);
+
+let sunMarker = null;
+let moonMarker = null;
+let moonOrbitLayer = null;
+let activeRulerLine = null;
+
+// dynamic per-planet glow CSS for the SVG orbit strokes
+let glowCss = "";
+PLANETS.forEach(p=>{ glowCss += `.orbit-${p.key}{filter:drop-shadow(0 0 5px ${p.color}) drop-shadow(0 0 2px ${p.color});}`; });
+const styleTag = document.createElement("style"); styleTag.textContent = glowCss; document.head.appendChild(styleTag);
+
+const INNER = new Set(["mercury","venus","earth","mars"]);
+
+function getPlanetIconHtml(p) {
+  const isLocalFile = window.location.protocol === 'file:';
+  const isPluto = p.key === "pluto";
+  const ringHtml = p.ring ? `<span class="planet-ring"></span>` : "";
+  const sphereBg = `radial-gradient(circle at 34% 30%, ${p.glow}, ${p.color} 58%, #000a 130%)`;
+  const displayName = t('planet_' + p.key);
+
+  if (isLocalFile || isPluto) {
+    return `<div class="planet-body" style="--glow:${p.glow};background:${sphereBg};">${ringHtml}</div><span class="planet-lab">${displayName}</span>`;
+  }
+
+  const modelFile = p.key === "moon" ? "Planet model/Moon.glb" : `Planet model/${p.key}.glb`;
+  const isSaturn = p.key === "saturn";
+  const orientationAttr = isSaturn ? 'orientation="26.73deg 0 0"' : '';
+  const transformStyle = isSaturn ? 'transform:rotate(-22deg);' : '';
+
+  return `
+    <div style="position:relative; width:100%; height:100%; border-radius:50%; overflow:visible;">
+      <!-- 2D fallback (shown until 3D loads) -->
+      <div class="planet-body planet-fallback" data-planet="${p.key}" style="position:absolute; inset:0; --glow:${p.glow}; background:${sphereBg}; z-index:1; transition: opacity 0.5s ease;">
+        ${ringHtml}
+      </div>
+      <!-- 3D model viewer -->
+      <model-viewer
+        src="${modelFile}"
+        alt="3D ${t('planet_' + p.key)}"
+        data-planet="${p.key}"
+        auto-rotate
+        loading="eager"
+        rotation-per-second="30deg"
+        interaction-prompt="none"
+        camera-orbit="0deg 75deg auto"
+        field-of-view="38deg"
+        disable-zoom
+        disable-pan
+        shadow-intensity="0"
+        environment-image="neutral"
+        ${orientationAttr}
+        style="position:absolute; inset:-4px; z-index:2; width:calc(100% + 8px); height:calc(100% + 8px); background:transparent; display:block; pointer-events:none; ${transformStyle}"
+        aria-hidden="true">
+      </model-viewer>
+    </div>
+    <span class="planet-lab">${displayName}</span>
+  `;
+}
+
+function getSunIconHtml() {
+  const isLocalFile = window.location.protocol === 'file:';
+  const modelFile = "Planet model/sun.glb";
+  const sunLabHtml = currentLang === 'am'
+    ? `<span class="sun-lab"><b>☀ ፀሐይ</b><span class="am">ኢ.ስ.ሳ.ሶ ጽ/ቤት · አአዩ</span></span>`
+    : `<span class="sun-lab"><b>☀ THE SUN</b><span class="en">ESSS Office · AAU</span></span>`;
+
+  if (isLocalFile) {
+    return `<span class="sun-pulse"></span><span class="sun-pulse d2"></span><span class="sun-core"></span>
+            ${sunLabHtml}`;
+  }
+
+  return `
+    <span class="sun-pulse"></span><span class="sun-pulse d2"></span>
+    <div style="position:relative; width:100%; height:100%; z-index:2; border-radius:50%; overflow:hidden;">
+      <!-- 2D fallback -->
+      <span class="sun-core planet-fallback" data-planet="sun" style="position:absolute; inset:0; display:block; z-index:1; transition: opacity 0.5s ease;"></span>
+      <!-- 3D model viewer -->
+      <model-viewer
+        src="${modelFile}"
+        alt="3D Sun"
+        data-planet="sun"
+        auto-rotate
+        loading="eager"
+        rotation-per-second="10deg"
+        interaction-prompt="none"
+        camera-orbit="0deg 75deg auto"
+        field-of-view="38deg"
+        disable-zoom
+        disable-pan
+        shadow-intensity="0"
+        environment-image="neutral"
+        style="position:absolute; inset:-4px; z-index:2; width:calc(100% + 8px); height:calc(100% + 8px); background:transparent; display:block; pointer-events:none;"
+        aria-hidden="true">
+      </model-viewer>
+    </div>
+    ${sunLabHtml}
+  `;
+}
+
+function buildPlanet(p){
+  // Position on the elliptical orbit (Sun at one focus)
+  const r = orbitRadiusAtAngle(p.mapKm, p.ecc, p.perihelion, p.angle);
+  const pos = destination(SUN.lat, SUN.lng, r, p.angle);
+
+  // Elliptical orbit ring
+  const orbitPts = ellipseOrbitPoints(SUN.lat, SUN.lng, p.mapKm, p.ecc, p.perihelion);
+  const ring = L.polygon(orbitPts, {
+    color: p.color, weight: 1.6, opacity: 0.55,
+    dashArray: "6 9", fill:true, fillColor:p.color, fillOpacity: 0.025,
+    className: "orbit-"+p.key, interactive:false,
+    smoothFactor: 0,
+  });
+  orbitLayers[p.key] = ring;
+
+  // planet body marker (divIcon)
+  const icon = L.divIcon({
+    className:"planet-ico",
+    iconSize:[p.size, p.size],
+    iconAnchor:[p.size/2, p.size/2],
+    html: getPlanetIconHtml(p),
+  });
+  const mk = L.marker(pos, { icon, riseOnHover:true });
+  mk.on("mouseover", () => highlightOrbit(p.key, true));
+  mk.on("mouseout", () => highlightOrbit(p.key, false));
+  mk.bindPopup(popupHtml(p), { maxWidth:300, minWidth:268, autoPanPadding:[40,40] });
+  planetMarkers[p.key] = mk;
+
+  // --- Add the Moon orbiting Earth ---
+  if (p.key === "earth") {
+    const moonData = {
+      key: "moon", name: "Moon", am: "ጨረቃ", color: "#c4c8d0", glow: "#ffffff",
+      realKm: 0.3844, diameter: 3474, moons: 0, period: "27.3 days",
+      ecc: 0.0549, size: computeIconSize(3474), fact: "Earth's only natural satellite. It is tidally locked, meaning we always see the same side."
+    };
+
+    // Moon distance on map (realMoonKm * 1e6 * SCALE)
+    const moonMapKm = moonData.realKm * 1e6 * SCALE;
+    const moonAngle = p.angle + 45; // Place Moon at 45 degrees offset from Earth position
+    const moonPos = destination(pos[0], pos[1], moonMapKm, moonAngle);
+
+    // Dotted orbit ring around Earth
+    moonOrbitLayer = L.circle(pos, {
+      radius: moonMapKm * 1000, // in meters
+      color: "rgba(255, 255, 255, 0.22)",
+      weight: 1.2,
+      dashArray: "2 4",
+      fill: false,
+      interactive: false,
+      className: "orbit-moon"
+    });
+    orbitGroup.addLayer(moonOrbitLayer);
+
+    // Moon marker icon
+    const moonIcon = L.divIcon({
+      className: "planet-ico",
+      iconSize: [moonData.size, moonData.size],
+      iconAnchor: [moonData.size / 2, moonData.size / 2],
+      html: getPlanetIconHtml(moonData),
+    });
+    moonMarker = L.marker(moonPos, { icon: moonIcon, riseOnHover: true });
+    moonMarker.on("mouseover", () => highlightOrbit("earth", true));
+    moonMarker.on("mouseout", () => highlightOrbit("earth", false));
+    moonMarker.bindPopup(moonPopupHtml(moonData, p), { maxWidth: 300, minWidth: 268 });
+    planetGroup.addLayer(moonMarker);
+  }
+}
+
+function getPopupHeaderHtml(name, am, isDwarf, color, glow, key, isSun = false) {
+  const isLocalFile = window.location.protocol === 'file:';
+  const isPluto = key === "pluto";
+  const bgGrad = `radial-gradient(circle at center, ${color}15 0%, #060814 100%)`;
+  const typeStr = isSun ? t('gTypeStar') : (isDwarf ? t('dwarfPlanet') : (key === "moon" ? t('naturalSatellite') : t('planet')));
+
+  // Radial gradient for the 2D fallback sphere
+  const sphereBg = isSun 
+    ? `radial-gradient(circle at 38% 32%,#fff8e0,#ffd95a 38%,#ff8a1e 100%)`
+    : `radial-gradient(circle at 34% 30%, ${glow}, ${color} 58%, #000a 130%)`;
+  const sphereGlow = isSun ? `#ffd95a` : glow;
+
+  if (isPluto) {
+    return `
+    <div class="pp-3d-box" style="background:${bgGrad}">
+      <div class="pp-2d-fallback" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:${bgGrad}; z-index:20;">
+        <div class="pp-orb" style="width:70px; height:70px; margin-bottom:15px; --glow:${sphereGlow}; background:${sphereBg}; box-shadow:0 0 24px -2px ${sphereGlow}, inset -5px -5px 12px rgba(0,0,0,.6), inset 5px 5px 10px rgba(255,255,255,.25);"></div>
+        <div class="pp-3d-title" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
+          <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
+          <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
+            <span class="am">${am}</span>
+            <span>${typeStr} · ${t('mode2D')}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const modelFile = key === "sun" ? "Planet model/sun.glb" : (key === "moon" ? "Planet model/Moon.glb" : `Planet model/${key}.glb`);
+  const isSaturn = key === "saturn";
+  const orientationAttr = isSaturn ? 'orientation="26.73deg 0 0"' : '';
+  const transformStyle = isSaturn ? 'transform:rotate(-22deg);' : '';
+
+  return `
+  <div class="pp-3d-box" style="background:${bgGrad}">
+    <model-viewer 
+      class="pp-model-viewer"
+      src="${modelFile}" 
+      alt="3D model of ${name}" 
+      auto-rotate 
+      camera-controls 
+      disable-zoom 
+      interaction-prompt="none" 
+      shadow-intensity="${isSun ? 0 : 1}"
+      ${orientationAttr}
+      style="width:100%; height:100%; display:block; ${transformStyle}">
+      
+      <!-- 2D Fallback shown only on loading error (e.g. CORS block under file://) -->
+      <div class="pp-2d-fallback" style="position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; background:${bgGrad}; z-index:20;">
+        <div class="pp-orb" style="width:70px; height:70px; margin-bottom:15px; --glow:${sphereGlow}; background:${sphereBg}; box-shadow:0 0 24px -2px ${sphereGlow}, inset -5px -5px 12px rgba(0,0,0,.6), inset 5px 5px 10px rgba(255,255,255,.25);"></div>
+        <div class="pp-3d-title" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
+          <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
+          <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
+            <span class="am">${am}</span>
+            <span>${typeStr} · ${t('mode2D')}</span>
+          </div>
+        </div>
+        ${isLocalFile ? `<div style="position:absolute; top:8px; right:8px; font-size:8px; font-weight:700; color:var(--muted); background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; letter-spacing:0.5px; z-index:30;">${t('localFileTag')}</div>` : ""}
+      </div>
+    </model-viewer>
+    
+    <div class="pp-3d-title-main" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none; z-index:10;">
+      <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
+      <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
+        <span class="am">${am}</span>
+        <span>${typeStr}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function moonPopupHtml(p, earth) {
+  const moonMapKm = p.realKm * 1e6 * SCALE;
+  const walkMin = Math.round((moonMapKm / 5) * 60);
+  const walkStr = walkMin < 60 ? `${walkMin} ${t('min')}` : `${(moonMapKm / 5).toFixed(1)} ${t('hr')}`;
+  const compText = getComparableObject(p.diameter * SCALE * 1000);
+  const isLocalFile = window.location.protocol === 'file:';
+  const displayName = t('planet_' + p.key);
+  const subName = t('planet_' + p.key + '_sub');
+  const earthName = t('planet_' + earth.key);
+
+  const headerHtml = getPopupHeaderHtml(displayName, subName, false, p.color, p.glow, p.key, false);
+
+  return `
+  ${headerHtml}
+  <div class="pp-grid">
+    <div class="pp-cell"><div class="l">${t('distFromEarth')}</div><div class="v">${(p.realKm * 1e6).toLocaleString()} km<br><small>${(moonMapKm * 1000).toFixed(1)} m ${t('onMap')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('diameter')}</div><div class="v">${p.diameter.toLocaleString()} km<br><small>${scaledDiameter(p.diameter)} ${t('scaled')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('parentBody')}</div><div class="v">${earthName}</div></div>
+    <div class="pp-cell"><div class="l">${t('orbitalPeriod')}</div><div class="v">${t('period_' + p.key)}</div></div>
+  </div>
+  <div class="pp-fact">${t('fact_moon')}</div>
+  <div class="pp-walk">${t('walkDistEarthLabel')} <b>${(moonMapKm * 1000).toFixed(1)} m</b> &nbsp;·&nbsp; ≈ ${walkStr} ${t('onFoot')}</div>
+  <div class="pp-fact" style="border-top:1px solid var(--stroke);padding-top:8px;">${t('atThisScale')} ${t('theMoon')} ${t('isSizeOf')} <b>${compText}</b>.</div>
+  ${isLocalFile ? `<div class="pp-walk" style="background:rgba(255,206,77,0.06); color:var(--gold); border-top:1px solid var(--stroke); font-size:10px; line-height:1.35; padding:8px 12px;">${t('localFileHint')}</div>` : ""}
+  <button class="pp-btn" data-zoom="earth">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg>
+    ${t('flyToEarthMoon')}
+  </button>`;
+}
+
+function popupHtml(p){
+  const walk = ((p.mapKm/5)).toFixed(p.mapKm<10?1:0); // hours at 5 km/h
+  const walkStr = p.mapKm < 1 ? t('minutes') : (p.mapKm/5 < 1 ? Math.round(p.mapKm/5*60)+` ${t('min')}` : walk+` ${t('hr')}`);
+  const compText = getComparableObject(p.diameter * SCALE * 1000);
+  const isLocalFile = window.location.protocol === 'file:';
+  const displayName = t('planet_' + p.key);
+  const subName = t('planet_' + p.key + '_sub');
+  
+  const headerHtml = getPopupHeaderHtml(displayName, subName, p.dwarf, p.color, p.glow, p.key, false);
+    
+  return `
+  ${headerHtml}
+  <div class="pp-grid">
+    <div class="pp-cell"><div class="l">${t('distFromSun')}</div><div class="v">${fmtKm(p.realKm*1e6)}<br><small>${p.mapKm.toFixed(2)} km ${t('onMap')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('diameter')}</div><div class="v">${p.diameter.toLocaleString()} km<br><small>${scaledDiameter(p.diameter)} ${t('scaled')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('moonsLabel')}</div><div class="v">${p.moons}</div></div>
+    <div class="pp-cell"><div class="l">${t('orbitalPeriod')}</div><div class="v">${t('period_' + p.key)}</div></div>
+  </div>
+  <div class="pp-fact">${t('fact_' + p.key)}</div>
+  <div class="pp-walk">${t('walkDistLabel')} <b>${p.mapKm.toFixed(2)} km</b> &nbsp;·&nbsp; ≈ ${walkStr} ${t('onFoot')}</div>
+  <div class="pp-fact" style="border-top:1px solid var(--stroke);padding-top:8px;">${t('atThisScale')} ${displayName} ${t('isSizeOf')} <b>${compText}</b>.</div>
+  ${isLocalFile ? `<div class="pp-walk" style="background:rgba(255,206,77,0.06); color:var(--gold); border-top:1px solid var(--stroke); font-size:10px; line-height:1.35; padding:8px 12px;">${t('localFileHint')}</div>` : ""}
+  <button class="pp-btn" data-zoom="${p.key}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg>
+    ${t('flyTo')} ${displayName}
+  </button>`;
+}
+
+function sunPopupHtml() {
+  const sunScaledDiam = scaledDiameter(1392000);
+  const earthData = PLANETS.find(p=>p.key==="earth");
+  const earthScaledDiam = scaledDiameter(earthData.diameter);
+  const compText = getComparableObject(1392000 * SCALE * 1000);
+  const isLocalFile = window.location.protocol === 'file:';
+  
+  const headerHtml = getPopupHeaderHtml(t('theSun'), t('theSunAm'), false, "#ffe44d", "#ffcd3a", "sun", true);
+  
+  return `
+  ${headerHtml}
+  <div class="pp-grid">
+    <div class="pp-cell"><div class="l">${t('diameter')}</div><div class="v">1,392,000 km<br><small>${sunScaledDiam} ${t('scaled')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('surfaceTemp')}</div><div class="v">5,505 °C</div></div>
+    <div class="pp-cell"><div class="l">${t('location')}</div><div class="v" style="font-size:12px">${t('centerOfSystem')}</div></div>
+    <div class="pp-cell"><div class="l">${t('shareOfMass')}</div><div class="v">99.86%</div></div>
+  </div>
+  <div class="pp-fact">${t('sunAtScale')} <b>${compText}</b>. ${t('earthIs')} <b>${earthScaledDiam}</b> ${t('acrossOrbiting')} ${earthData.mapKm.toFixed(2)} km ${t('away')}</div>
+  ${isLocalFile ? `<div class="pp-walk" style="background:rgba(255,206,77,0.06); color:var(--gold); border-top:1px solid var(--stroke); font-size:10px; line-height:1.35; padding:8px 12px;">${t('localFileHint')}</div>` : ""}
+  `;
+}
+
+function flyToPlanet(p){
+  const pos = planetMarkers[p.key].getLatLng();
+  // pick a zoom that frames the orbit nicely
+  const z = p.mapKm < 8 ? 14 : p.mapKm < 30 ? 12 : p.mapKm < 120 ? 10 : p.mapKm < 320 ? 9 : 8;
+  map.flyTo(pos, z, { duration:1.7 });
+  setTimeout(()=>planetMarkers[p.key].openPopup(), 1750);
+}
+
+
+// =====================================================================
+// REGIONS — Asteroid Belt, Kuiper Belt, Oort Cloud
+// =====================================================================
+const REGIONS = [
+  {
+    key: "asteroid",
+    color: "#bfa38a",
+    glow: "#d9c3b0",
+    innerAu: 2.2,
+    outerAu: 3.2,
+    anchorAu: 2.7,
+    angle: 135
+  },
+  {
+    key: "kuiper",
+    color: "#8bb6e8",
+    glow: "#b5d4f7",
+    innerAu: 30,
+    outerAu: 50,
+    anchorAu: 40,
+    angle: 315
+  },
+  {
+    key: "oort",
+    color: "#d1c4e9",
+    glow: "#e1bee7",
+    innerAu: 2000,
+    outerAu: 50000,
+    anchorAu: 2000,
+    angle: 90
+  }
+];
+
+function makeDonutPoints(lat, lng, innerKm, outerKm, nPoints = 120) {
+  const outerRing = [];
+  const innerRing = [];
+  for (let i = 0; i <= nPoints; i++) {
+    const angle = (360 * i) / nPoints;
+    outerRing.push(destination(lat, lng, outerKm, angle));
+    innerRing.push(destination(lat, lng, innerKm, angle));
+  }
+  return [outerRing, innerRing.reverse()];
+}
+
+function regionPopupHtml(r) {
+  const innerKm = r.innerAu * 149.6e6;
+  const outerKm = r.outerAu * 149.6e6;
+  const mapInnerKm = innerKm * SCALE;
+  const mapOuterKm = outerKm * SCALE;
+  
+  const displayName = t('region_' + r.key);
+  const subName = t('region_' + r.key + '_sub');
+  
+  const bgGrad = `radial-gradient(circle at center, ${r.color}15 0%, #060814 100%)`;
+  const headerHtml = `
+  <div class="pp-3d-box" style="background:${bgGrad}; height:80px; display:flex; align-items:center; justify-content:center;">
+    <div style="font-size:32px; text-shadow:0 0 10px ${r.color};">${r.key === 'asteroid' ? '☄️' : (r.key === 'kuiper' ? '❄️' : '☁️')}</div>
+    <div class="pp-3d-title-main" style="position:absolute; bottom:0; left:0; right:0; padding:8px 12px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
+      <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:16px; font-weight:700; color:#fff;">${displayName}</h2>
+      <div class="sub" style="margin-top:2px; font-size:10px; color:var(--muted);">${subName}</div>
+    </div>
+  </div>`;
+
+  let scaleDesc = "";
+  if (r.key === "oort") {
+    const mapDistVal = mapInnerKm < 1 ? `${(mapInnerKm * 1000).toFixed(0)} ${t('unitM')}` : `${mapInnerKm.toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US')} ${t('unitKm')}`;
+    const mapOuterVal = mapOuterKm < 1000 ? `${(mapOuterKm * 1000).toFixed(0)} ${t('unitM')}` : `${mapOuterKm.toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US')} ${t('unitKm')}`;
+    scaleDesc = `${t('atThisScale')} ${t('region_' + r.key)} ${t('startsAt')} <b>${mapDistVal}</b> ${t('away')} ${t('extendingTo')} <b>${mapOuterVal}</b> ${t('away')}!`;
+  } else {
+    const inVal = mapInnerKm < 1 ? `${(mapInnerKm * 1000).toFixed(0)} ${t('unitM')}` : `${mapInnerKm.toFixed(1)} ${t('unitKm')}`;
+    const outVal = mapOuterKm < 1 ? `${(mapOuterKm * 1000).toFixed(0)} ${t('unitM')}` : `${mapOuterKm.toFixed(1)} ${t('unitKm')}`;
+    scaleDesc = `${t('atThisScale')} ${t('region_' + r.key)} ${t('extendsFrom')} <b>${inVal}</b> ${t('to')} <b>${outVal}</b> ${t('fromSun')}.`;
+  }
+
+  return `
+  ${headerHtml}
+  <div class="pp-grid">
+    <div class="pp-cell"><div class="l">${t('distLabel')}</div><div class="v">${r.innerAu} - ${r.outerAu} AU<br><small>${innerKm.toLocaleString()} - ${outerKm.toLocaleString()} ${t('unitKm')}</small></div></div>
+    <div class="pp-cell"><div class="l">${t('widthLabel')}</div><div class="v">${t('width_' + r.key)}</div></div>
+    <div class="pp-cell"><div class="l">${t('typeLabel')}</div><div class="v">${t('type_' + r.key)}</div></div>
+    <div class="pp-cell"><div class="l">${t('orbitalPeriod')}</div><div class="v">${t('period_' + r.key)}</div></div>
+  </div>
+  <div class="pp-fact">${t('fact_' + r.key)}</div>
+  <div class="pp-fact" style="border-top:1px solid var(--stroke);padding-top:8px;font-size:11px;color:var(--gold);">${scaleDesc}</div>
+  <button class="pp-btn" data-zoom="${r.key}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg>
+    ${t('flyTo')} ${displayName}
+  </button>`;
+}
+
+function buildRegion(r) {
+  const innerKm = r.innerAu * 149.6e6 * SCALE;
+  const outerKm = r.outerAu * 149.6e6 * SCALE;
+
+  let ring;
+  if (r.key === 'oort') {
+    ring = L.circle([SUN.lat, SUN.lng], {
+      radius: innerKm * 1000,
+      color: r.color,
+      weight: 1.2,
+      dashArray: "6 12",
+      fill: true,
+      fillColor: r.color,
+      fillOpacity: 0.02,
+      interactive: false,
+      className: "orbit-oort"
+    });
+  } else {
+    const donutPts = makeDonutPoints(SUN.lat, SUN.lng, innerKm, outerKm);
+    ring = L.polygon(donutPts, {
+      color: r.color,
+      weight: 0.8,
+      opacity: 0.25,
+      dashArray: "3 6",
+      fillColor: r.color,
+      fillOpacity: 0.1,
+      interactive: false,
+      className: "orbit-" + r.key
+    });
+  }
+  regionLayers[r.key] = ring;
+
+  const anchorKm = r.anchorAu * 149.6e6 * SCALE;
+  const markerPos = destination(SUN.lat, SUN.lng, anchorKm, r.angle);
+  const badgeStyle = `border: 1px solid ${r.color}40; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 8px ${r.color}15, inset 0 0 6px ${r.color}15;`;
+  const iconStyle = `background: ${r.color}18; border: 1px solid ${r.color}35; text-shadow: 0 0 4px ${r.color};`;
+  const pulseStyle = `background: ${r.color}; box-shadow: 0 0 6px ${r.color};`;
+  const emoji = r.key === 'asteroid' ? '☄️' : (r.key === 'kuiper' ? '❄️' : '☁️');
+
+  const iconHtml = `<div class="region-badge" style="${badgeStyle}">
+                      <span class="region-badge-icon" style="${iconStyle}">${emoji}</span>
+                      ${t('region_' + r.key)}
+                      <span class="region-badge-pulse" style="${pulseStyle}"></span>
+                    </div>`;
+  
+  const marker = L.marker(markerPos, {
+    icon: L.divIcon({ className: "", iconSize: [0, 0], html: iconHtml }),
+    riseOnHover: true
+  });
+  
+  marker.bindPopup(regionPopupHtml(r), { minWidth: 268, maxWidth: 300 });
+  regionMarkers[r.key] = marker;
+}
+
+function flyToRegion(r) {
+  const marker = regionMarkers[r.key];
+  if (!marker) return;
+  const pos = marker.getLatLng();
+  const outerMapKm = r.outerAu * 149.6e6 * SCALE;
+  const z = outerMapKm < 15 ? 13 : outerMapKm < 60 ? 11 : outerMapKm < 240 ? 9 : outerMapKm < 1000 ? 7 : 5;
+  map.flyTo(pos, z, { duration: 1.7 });
+  setTimeout(() => marker.openPopup(), 1750);
+}
+
+function toggleRegion(key, force) {
+  const row = plist.querySelector(`.prow[data-key="${key}"]`);
+  const on = (force !== undefined) ? force : !row.classList.contains("on");
+  row.classList.toggle("on", on);
+  const ring = regionLayers[key];
+  const marker = regionMarkers[key];
+  if (on) {
+    if (ring && !regionGroup.hasLayer(ring)) regionGroup.addLayer(ring);
+    if (marker && !regionGroup.hasLayer(marker)) regionGroup.addLayer(marker);
+  } else {
+    if (ring) regionGroup.removeLayer(ring);
+    if (marker) regionGroup.removeLayer(marker);
+  }
+  
+  const insetRing = insetRegionLayers[key];
+  if (insetRing) {
+    if (on) {
+      if (!inset.hasLayer(insetRing)) insetRing.addTo(inset);
+    } else {
+      inset.removeLayer(insetRing);
+    }
+  }
+}
+
+function getRegionRangeMapStr(r) {
+  if (r.key === 'oort') {
+    const oortInnerKm = r.innerAu * 149.6e6 * SCALE;
+    if (oortInnerKm > 20000) {
+      return t('scaleTooBig');
+    }
+  }
+  const innerMapKm = r.innerAu * 149.6e6 * SCALE;
+  const outerMapKm = r.outerAu * 149.6e6 * SCALE;
+  if (outerMapKm < 1) {
+    const innerM = (innerMapKm * 1000).toFixed(0);
+    const outerM = (outerMapKm * 1000).toFixed(0);
+    return `${innerM} - ${outerM} ${t('unitM')}`;
+  }
+  if (innerMapKm < 1) {
+    const innerM = (innerMapKm * 1000).toFixed(0);
+    return `${innerM} ${t('unitM')} - ${outerMapKm.toFixed(1)} ${t('unitKm')}`;
+  }
+  return `${innerMapKm.toFixed(0)} - ${outerMapKm.toFixed(0)} ${t('unitKm')}`;
+}
+
+// Map-level listener to handle popup wiring synchronously upon opening
+map.on("popupopen", (e) => {
+  const container = e.popup.getElement();
+  if (!container) return;
+
+  // 1. Wire up zoom buttons (if any)
+  const btn = container.querySelector(".pp-btn");
+  let key = null;
+  if (btn) {
+    key = btn.dataset.zoom;
+    const p = PLANETS.find(x => x.key === key);
+    if (p) {
+      btn.onclick = () => flyToPlanet(p);
+    } else {
+      const r = REGIONS.find(x => x.key === key);
+      if (r) {
+        btn.onclick = () => flyToRegion(r);
+      }
+    }
+  } else {
+    // If it is the Moon details popup, the button zoom is Earth, check the title
+    const titleEl = container.querySelector('.pp-3d-title-main h2') || container.querySelector('.pp-3d-title h2');
+    if (titleEl) {
+      const name = titleEl.textContent.trim().toLowerCase();
+      if (name === "moon") key = "moon";
+    }
+  }
+
+  // 2. Wire up distance ruler line
+  if (activeRulerLine) {
+    map.removeLayer(activeRulerLine);
+    activeRulerLine = null;
+  }
+
+  if (key) {
+    let startPos = [SUN.lat, SUN.lng];
+    let endPos = null;
+    let lineColor = "#ffce4d";
+    
+    if (key === "moon") {
+      const earthPos = planetMarkers["earth"].getLatLng();
+      startPos = [earthPos.lat, earthPos.lng];
+      endPos = moonMarker.getLatLng();
+      lineColor = "#c4c8d0";
+    } else {
+      const p = PLANETS.find(x => x.key === key);
+      if (p) {
+        endPos = planetMarkers[key].getLatLng();
+        lineColor = p.color;
+      }
+    }
+
+    if (endPos) {
+      activeRulerLine = L.polyline([startPos, endPos], {
+        color: lineColor,
+        weight: 2,
+        opacity: 0.85,
+        dashArray: "5 7",
+        className: "active-ruler-line",
+        interactive: false
+      }).addTo(map);
+
+      const path = activeRulerLine.getElement();
+      if (path) {
+        path.style.setProperty('--ruler-color', lineColor);
+      }
+    }
+  }
+
+  // 3. Wire up model-viewer error fallback
+  const mv = container.querySelector(".pp-model-viewer");
+  if (mv) {
+    mv.addEventListener('error', (err) => {
+      console.warn("Model viewer failed to load model, showing 2D fallback:", err);
+      const fallback = mv.querySelector('.pp-2d-fallback');
+      if (fallback) {
+        fallback.style.display = 'flex';
+      }
+      const titleMain = container.querySelector('.pp-3d-title-main');
+      if (titleMain) {
+        titleMain.style.display = 'none';
+      }
+    });
+  }
+});
+
+map.on("popupclose", () => {
+  if (activeRulerLine) {
+    map.removeLayer(activeRulerLine);
+    activeRulerLine = null;
+  }
+});
+
+PLANETS.forEach(buildPlanet);
+
+// ---------- initialize cosmic regions ----------
+REGIONS.forEach(buildRegion);
+REGIONS.forEach(r => {
+  const isDefaultOn = r.key !== 'oort';
+  if (isDefaultOn) {
+    regionGroup.addLayer(regionLayers[r.key]);
+    regionGroup.addLayer(regionMarkers[r.key]);
+  }
+});
+
+// ---------- Sun marker ----------
+const sunIcon = L.divIcon({
+  className:"sun-ico", iconSize:[SUN_ICON_SIZE, SUN_ICON_SIZE], iconAnchor:[SUN_ICON_SIZE/2, SUN_ICON_SIZE/2],
+  html: getSunIconHtml(),
+});
+sunMarker = L.marker([SUN.lat, SUN.lng], { icon:sunIcon, zIndexOffset:1000 }).addTo(map);
+sunMarker.bindPopup(sunPopupHtml(), { minWidth:268, maxWidth:300 });
+
+// ---------- legend list ----------
+const plist = document.getElementById("plist");
+PLANETS.forEach(p=>{
+  const row = document.createElement("div");
+  row.className = "prow on" + (p.dwarf?" dwarf":"");
+  row.style.color = p.color;
+  row.dataset.key = p.key;
+  const displayName = t('planet_' + p.key);
+  const badgeAttr = p.dwarf ? ` data-badge="${t('dwarf')}"` : "";
+  row.innerHTML = `
+    <span class="cbx"></span>
+    <span class="dot" style="background:radial-gradient(circle at 34% 30%, ${p.glow}, ${p.color} 60%, #000a 130%);"></span>
+    <span class="nm"><b${badgeAttr}>${displayName}</b></span>
+    <span class="km">${p.mapKm < 1 ? `${(p.mapKm * 1000).toFixed(0)} ${t('unitM')}` : `${p.mapKm.toFixed(1)} ${t('unitKm')}`}</span>`;
+  // toggle ring
+  row.querySelector(".cbx").addEventListener("click", (e)=>{ e.stopPropagation(); toggleRing(p.key); });
+  // click row -> fly to planet
+  row.addEventListener("click", ()=>flyToPlanet(p));
+  
+  // Orbit highlights on hover
+  row.addEventListener("mouseenter", () => highlightOrbit(p.key, true));
+  row.addEventListener("mouseleave", () => highlightOrbit(p.key, false));
+  
+  plist.appendChild(row);
+});
+
+// ---------- initialize regions in the legend ----------
+const regHeader = document.createElement("div");
+regHeader.id = "legendRegionsHeader";
+regHeader.className = "legend-header";
+regHeader.style = "margin-top:12px; margin-bottom:6px; font-size:10px; font-weight:700; text-transform:uppercase; color:var(--gold); letter-spacing:1px; border-top:1px solid var(--stroke); padding-top:10px;";
+regHeader.textContent = t('legendRegions');
+plist.appendChild(regHeader);
+
+REGIONS.forEach(r => {
+  const row = document.createElement("div");
+  const isDefaultOn = r.key !== 'oort';
+  row.style.color = r.color;
+  row.dataset.key = r.key;
+  
+  let isOortDisabled = false;
+  if (r.key === 'oort') {
+    const oortInnerKm = r.innerAu * 149.6e6 * SCALE;
+    if (oortInnerKm > 20000) {
+      isOortDisabled = true;
+    }
+  }
+
+  if (isOortDisabled) {
+    row.className = "prow disabled";
+    row.style.opacity = "0.5";
+    row.style.pointerEvents = "none";
+  } else {
+    row.className = "prow" + (isDefaultOn ? " on" : "");
+  }
+  
+  row.innerHTML = `
+    <span class="cbx"></span>
+    <span class="dot" style="background:${r.color}; box-shadow:0 0 6px ${r.glow}; width:6px; height:6px; border-radius:50%; margin: 0 8px;"></span>
+    <span class="nm"><b>${t('region_' + r.key)}</b></span>
+    <span class="km">${getRegionRangeMapStr(r)}</span>`;
+    
+  row.querySelector(".cbx").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (row.classList.contains("disabled")) return;
+    toggleRegion(r.key);
+  });
+  row.addEventListener("click", () => {
+    if (row.classList.contains("disabled")) return;
+    flyToRegion(r);
+  });
+  
+  plist.appendChild(row);
+});
+
+function toggleRing(key, force){
+  const row = plist.querySelector(`.prow[data-key="${key}"]`);
+  const on = (force !== undefined) ? force : !row.classList.contains("on");
+  row.classList.toggle("on", on);
+  const ring = orbitLayers[key];
+  if (ring) {
+    if (on) {
+      if (!orbitGroup.hasLayer(ring)) orbitGroup.addLayer(ring);
+      
+    } else {
+      orbitGroup.removeLayer(ring);
+      
+    }
+  }
+  if (key === "earth" && moonOrbitLayer) {
+    if (on) {
+      if (!orbitGroup.hasLayer(moonOrbitLayer)) orbitGroup.addLayer(moonOrbitLayer);
+    } else {
+      orbitGroup.removeLayer(moonOrbitLayer);
+    }
+  }
+  
+  // Sync mini-map orbit ring visibility
+  const insetRing = insetOrbitLayers[key];
+  if (insetRing) {
+    if (on) {
+      if (!inset.hasLayer(insetRing)) inset.addLayer(insetRing);
+    } else {
+      inset.removeLayer(insetRing);
+    }
+  }
+}
+
+// ---------- view modes ----------
+
+function applyView(mode){
+  PLANETS.forEach(p=>{
+    // 'inner' = just the inner four rings; 'all' = everything except Pluto (toggle Pluto by hand)
+    const wantOn = mode==="all" ? p.key!=="pluto" : INNER.has(p.key);
+    setRow(p.key, wantOn);
+  });
+  if (mode==="inner") {
+    const b = orbitLayers["mars"].getBounds();
+    map.flyToBounds(b.pad(0.15), { duration: 1.4 });
+  } else {
+    frameAll();
+  }
+}
+function setRow(key, on){
+  toggleRing(key, on);
+}
+
+document.querySelectorAll("#viewSeg button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll("#viewSeg button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    applyView(b.dataset.view);
+  });
+});
+
+// add all markers + initial rings (inner shown, outer rings shown too but framed on inner)
+PLANETS.forEach(p=>{ planetGroup.addLayer(planetMarkers[p.key]); });
+PLANETS.forEach(p=>{
+  if (p.key==="pluto"){ setRow("pluto", false); return; }
+  orbitGroup.addLayer(orbitLayers[p.key]);
+});
+
+// ---------- frame helpers ----------
+function frameAll(){
+  const b = orbitLayers["neptune"].getBounds();
+  map.flyToBounds(b.pad(0.12), { duration:1.6 });
+}
+function resetView(){ 
+  map.flyTo(HOME.center, HOME.zoom, { duration:1.4 }); 
+  inset.flyTo(HOME.center, 7, { duration:1.4 });
+}
+
+document.getElementById("fabReset").onclick = resetView;
+document.getElementById("fabFit").onclick = ()=>{
+  // ensure outer rings visible when framing all
+  document.querySelectorAll("#viewSeg button").forEach(x=>x.classList.remove("active"));
+  document.querySelector('#viewSeg button[data-view="all"]').classList.add("active");
+  applyView("all");
+};
+
+// ---------- panel minimize/maximize event listeners ----------
+let simDashboardMinimized = false;
+
+function minimizeLegend() {
+  document.getElementById("legend").classList.add("collapsed");
+  document.getElementById("btnLegendOpen").classList.remove("hidden-btn");
+}
+function maximizeLegend() {
+  document.getElementById("legend").classList.remove("collapsed");
+  document.getElementById("btnLegendOpen").classList.add("hidden-btn");
+}
+
+function minimizeSim() {
+  simDashboardMinimized = true;
+  document.getElementById("sim-dash").classList.add("minimized");
+  document.getElementById("btnSimOpen").classList.remove("hidden-btn");
+  document.body.classList.add("sim-minimized");
+}
+function maximizeSim() {
+  simDashboardMinimized = false;
+  document.getElementById("sim-dash").classList.remove("minimized");
+  document.getElementById("btnSimOpen").classList.add("hidden-btn");
+  document.body.classList.remove("sim-minimized");
+}
+
+function minimizeInset() {
+  document.getElementById("inset").classList.add("minimized");
+  document.getElementById("btnInsetOpen").classList.remove("hidden-btn");
+}
+function maximizeInset() {
+  document.getElementById("inset").classList.remove("minimized");
+  document.getElementById("btnInsetOpen").classList.add("hidden-btn");
+}
+
+document.getElementById("legendHd").addEventListener("click", minimizeLegend);
+document.getElementById("btnLegendOpen").addEventListener("click", maximizeLegend);
+document.getElementById("btnSimClose").addEventListener("click", minimizeSim);
+document.getElementById("btnSimOpen").addEventListener("click", maximizeSim);
+document.getElementById("btnInsetClose").addEventListener("click", minimizeInset);
+document.getElementById("btnInsetOpen").addEventListener("click", maximizeInset);
+
+// ---------- inset mini-map (Ethiopia extent) ----------
+const inset = L.map("insetmap", {
+  center:[SUN.lat, SUN.lng], zoom:7, zoomControl:false, attributionControl:false,
+  dragging:true, scrollWheelZoom:true, doubleClickZoom:true, boxZoom:true,
+  touchZoom:true, keyboard:true,
+});
+let insetTileLayer = L.tileLayer(DARK_TILES, { subdomains:"abcd" }).addTo(inset);
+const neptuneData = PLANETS.find(p=>p.key==="neptune");
+
+let insetSunCircle, insetSunMarker, viewportRect;
+
+insetSunCircle = L.circle([SUN.lat, SUN.lng], { radius:5000, color:"#ffce4d", weight:1, fillColor:"#ffce4d", fillOpacity:.9 }).addTo(inset);
+insetSunMarker = L.marker([SUN.lat, SUN.lng], { 
+  icon:L.divIcon({
+    className:"",
+    iconSize:[10,10],
+    iconAnchor:[5,5],
+    html:'<div class="inset-sun-dot" style="width:10px;height:10px;border-radius:50%;background:#ffd95a;box-shadow:0 0 10px #ffba43;border:1px solid #fff;cursor:pointer;"></div>'
+  }) 
+}).addTo(inset);
+
+insetSunMarker.bindTooltip("The Sun", { permanent: false, direction: "top", className: "inset-tooltip" });
+insetSunMarker.on("click", (e) => {
+  L.DomEvent.stopPropagation(e);
+  resetView();
+});
+
+// Initialize orbits and planet dots on the mini-map
+PLANETS.forEach(p => {
+  // 1. Orbit circles on the mini-map
+  const ring = L.circle([SUN.lat, SUN.lng], {
+    radius: p.mapKm * 1000,
+    color: p.color,
+    weight: 0.8,
+    opacity: 0.35,
+    dashArray: "3 4",
+    fill: false,
+    interactive: false
+  });
+  insetOrbitLayers[p.key] = ring;
+
+  // Only add the orbit ring to the mini-map if it's active initially (Pluto is off by default)
+  if (p.key !== "pluto") {
+    ring.addTo(inset);
+  }
+
+  // 2. Planet dots on the mini-map
+  const dotIcon = L.divIcon({
+    className: "",
+    iconSize: [8, 8],
+    iconAnchor: [4, 4],
+    html: `<div class="inset-planet-dot" data-planet="${p.key}" style="width:8px;height:8px;border-radius:50%;background:${p.color};color:${p.color};box-shadow:0 0 6px ${p.glow};border:1px solid rgba(255,255,255,0.7);cursor:pointer;"></div>`
+  });
+  
+  const marker = L.marker([SUN.lat, SUN.lng], { icon: dotIcon, zIndexOffset: 500 }).addTo(inset);
+  marker.bindTooltip(t('planet_' + p.key), { permanent: false, direction: "top", className: "inset-tooltip" });
+  marker.on("click", (e) => {
+    L.DomEvent.stopPropagation(e);
+    flyToPlanet(p);
+  });
+  
+  insetPlanetMarkers[p.key] = marker;
+});
+
+
+// Initialize regions on the mini-map
+REGIONS.forEach(r => {
+  if (r.key === 'oort') return;
+  const outerRadius = r.outerAu * 149.6e6 * SCALE * 1000;
+  const insetRing = L.circle([SUN.lat, SUN.lng], {
+    radius: outerRadius,
+    color: r.color,
+    weight: 0,
+    fillColor: r.color,
+    fillOpacity: 0.06,
+    interactive: false
+  });
+  insetRegionLayers[r.key] = insetRing;
+  insetRing.addTo(inset);
+});
+
+viewportRect = L.rectangle(map.getBounds(), {
+  color: "#ff9d2e",
+  weight: 1.2,
+  fillColor: "#ff9d2e",
+  fillOpacity: 0.08,
+  interactive: false
+}).addTo(inset);
+
+// Sync viewport rectangle when the main map pans or zooms
+map.on("move", () => {
+  if (viewportRect) {
+    viewportRect.setBounds(map.getBounds());
+  }
+});
+
+// Click mini-map to pan map
+inset.on("click", (e) => {
+  map.panTo(e.latlng);
+});
+
+// ---------- compute walk time precisely ----------
+(function(){
+  updateWalkDisplay();
+})();
+
+// ---------- reveal ----------
+map.whenReady(()=>{
+  setTimeout(()=>{ inset.invalidateSize(); document.getElementById("veil").classList.add("gone"); }, 500);
+});
+window.addEventListener("resize", ()=>{ map.invalidateSize(); inset.invalidateSize(); });
+
+// declutter labels by zoom: hide planet labels when very zoomed-out,
+// hide landmark notes unless at inner-system zoom
+function updateZoomDeclutter(){
+  const z = map.getZoom(), c = map.getContainer();
+  c.classList.toggle("z-out", z < 10);   // hide planet name labels
+  c.classList.toggle("z-mid", z < 11);   // hide landmark annotations
+}
+map.on("zoomend", updateZoomDeclutter);
+updateZoomDeclutter();
+
+// ---------- Setup Wizard Logic ----------
+let tempSunLatLng = { lat: SUN.lat, lng: SUN.lng };
+let tempSunMarker = null;
+let previewOrbitCircle = null;
+let currentStep = 1;
+
+const wizardOverlay = document.getElementById("wizard-overlay");
+const wizNext = document.getElementById("wizNext");
+const wizBack = document.getElementById("wizBack");
+const step1El = document.getElementById("step1");
+const step2El = document.getElementById("step2");
+const wizSearch = document.getElementById("wizSearch");
+const wizSearchBtn = document.getElementById("wizSearchBtn");
+const wizGPSBtn = document.getElementById("wizGPSBtn");
+const wizLocStatus = document.getElementById("wizLocStatus");
+const wizCustomRow = document.getElementById("wizCustomRow");
+const wizCustomVal = document.getElementById("wizCustomVal");
+const wizCustomUnit = document.getElementById("wizCustomUnit");
+
+function showWizard() {
+  wizardOverlay.classList.remove("hidden");
+  setStep(1);
+  document.getElementById("sim-dash").classList.add("hidden");
+  document.getElementById("btnSimOpen").classList.add("hidden-btn");
+  if (!tempSunMarker) {
+    const tempIcon = L.divIcon({
+      className: "sun-ico", iconSize: [34,34], iconAnchor: [17,17],
+      html: `<span class="sun-pulse" style="animation-duration: 1.5s;"></span><span class="sun-core" style="box-shadow: 0 0 20px 4px #ff9d2e; cursor: grab;"></span>`
+    });
+    tempSunMarker = L.marker([SUN.lat, SUN.lng], { icon: tempIcon, draggable: true, zIndexOffset: 2000 }).addTo(map);
+    tempSunMarker.on("drag", (e) => {
+      tempSunLatLng = e.target.getLatLng();
+      updateWizLocStatus();
+    });
+    tempSunMarker.on("dragend", (e) => {
+      tempSunLatLng = e.target.getLatLng();
+      updateWizLocStatus();
+      map.panTo(tempSunLatLng);
+    });
+  } else {
+    tempSunMarker.setLatLng([SUN.lat, SUN.lng]);
+    tempSunMarker.addTo(map);
+  }
+  tempSunLatLng = { lat: SUN.lat, lng: SUN.lng };
+  updateWizLocStatus();
+  map.on("click", onMapClickForSun);
+  map.flyTo([SUN.lat, SUN.lng], 14, { duration: 1.2 });
+}
+
+function hideWizard() {
+  wizardOverlay.classList.add("hidden");
+  wizardOverlay.classList.remove("floating");
+  if (simDashboardMinimized) {
+    document.getElementById("btnSimOpen").classList.remove("hidden-btn");
+    document.getElementById("sim-dash").classList.add("minimized");
+    document.body.classList.add("sim-minimized");
+  } else {
+    document.getElementById("sim-dash").classList.remove("hidden");
+    document.body.classList.remove("sim-minimized");
+  }
+  if (tempSunMarker) map.removeLayer(tempSunMarker);
+  if (previewOrbitCircle) map.removeLayer(previewOrbitCircle);
+  map.off("click", onMapClickForSun);
+}
+
+// Close & Skip buttons dismiss wizard with default settings
+document.getElementById("wizClose").onclick = () => { hideWizard(); resetView(); };
+document.getElementById("wizSkip").onclick = () => { hideWizard(); resetView(); };
+
+function onMapClickForSun(e) {
+  if (currentStep === 1) {
+    tempSunLatLng = e.latlng;
+    tempSunMarker.setLatLng(tempSunLatLng);
+    updateWizLocStatus();
+  }
+}
+
+function updateWizLocStatus() {
+  wizLocStatus.innerHTML = `${t('sunSetTo')} <b>${tempSunLatLng.lat.toFixed(4)}, ${tempSunLatLng.lng.toFixed(4)}</b>`;
+}
+
+function setStep(step) {
+  currentStep = step;
+  if (step === 1) {
+    wizardOverlay.classList.add("floating");
+    step1El.classList.add("active");
+    step2El.classList.remove("active");
+    wizBack.disabled = true;
+    wizNext.textContent = t('nextStep');
+    if (previewOrbitCircle) map.removeLayer(previewOrbitCircle);
+  } else if (step === 2) {
+    wizardOverlay.classList.remove("floating");
+    step1El.classList.remove("active");
+    step2El.classList.add("active");
+    wizBack.disabled = false;
+    wizNext.textContent = t('launchWalk');
+    updateOrbitPreview();
+  }
+}
+
+function getSelectedSunDiameter() {
+  const activePreset = document.querySelector(".preset-card.active");
+  const val = activePreset.dataset.val;
+  if (val === "custom") {
+    let d = parseFloat(wizCustomVal.value) || 1.0;
+    if (wizCustomUnit.value === "cm") d = d / 100;
+    return d;
+  }
+  return parseFloat(val);
+}
+
+function updateOrbitPreview() {
+  if (previewOrbitCircle) map.removeLayer(previewOrbitCircle);
+  const sunDiam = getSelectedSunDiameter();
+  const scale = sunDiam / 1392000000; // actual Sun is 1,392,000 km
+  const neptuneRadiusMapMeters = 4495.1 * 1e6 * scale * 1000;
+  
+  previewOrbitCircle = L.circle([tempSunLatLng.lat, tempSunLatLng.lng], {
+    radius: neptuneRadiusMapMeters,
+    color: "#4f6fd9",
+    weight: 2,
+    opacity: 0.8,
+    dashArray: "8 8",
+    fillColor: "#4f6fd9",
+    fillOpacity: 0.04,
+    interactive: false
+  }).addTo(map);
+  
+  map.flyToBounds(previewOrbitCircle.getBounds().pad(0.1), { duration: 1.2 });
+}
+
+// Preset Handlers
+document.querySelectorAll(".preset-card").forEach(card => {
+  card.addEventListener("click", () => {
+    document.querySelectorAll(".preset-card").forEach(x => x.classList.remove("active"));
+    card.classList.add("active");
+    if (card.dataset.val === "custom") {
+      wizCustomRow.classList.add("show");
+    } else {
+      wizCustomRow.classList.remove("show");
+    }
+    if (currentStep === 2) {
+      updateOrbitPreview();
+    }
+  });
+});
+
+wizCustomVal.addEventListener("input", () => {
+  if (currentStep === 2) updateOrbitPreview();
+});
+wizCustomUnit.addEventListener("change", () => {
+  if (currentStep === 2) updateOrbitPreview();
+});
+
+// Search functionality
+wizSearchBtn.addEventListener("click", () => {
+  const q = wizSearch.value.trim();
+  if (!q) return;
+  wizLocStatus.innerHTML = t('searching');
+  fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`, {
+    headers: { 'User-Agent': 'SolarSystemWalkApp/1.0' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data && data.length > 0) {
+        const item = data[0];
+        tempSunLatLng = { lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+        tempSunMarker.setLatLng(tempSunLatLng);
+        updateWizLocStatus();
+        map.flyTo([tempSunLatLng.lat, tempSunLatLng.lng], 14, { duration: 1.0 });
+      } else {
+        wizLocStatus.innerHTML = `${t('noResults')} "${q}"`;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      wizLocStatus.innerHTML = t('searchError');
+    });
+});
+
+wizSearch.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") wizSearchBtn.click();
+});
+
+// GPS functionality
+wizGPSBtn.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    wizLocStatus.innerHTML = t('gpsNotSupported');
+    return;
+  }
+  wizLocStatus.innerHTML = t('locating');
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      tempSunLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      tempSunMarker.setLatLng(tempSunLatLng);
+      updateWizLocStatus();
+      map.flyTo([tempSunLatLng.lat, tempSunLatLng.lng], 15, { duration: 1.0 });
+    },
+    (err) => {
+      console.error(err);
+      wizLocStatus.innerHTML = t('couldNotGps');
+    }
+  );
+});
+
+// Navigation buttons
+wizNext.addEventListener("click", () => {
+  if (currentStep === 1) {
+    setStep(2);
+  } else {
+    rebuildSystem(tempSunLatLng.lat, tempSunLatLng.lng, getSelectedSunDiameter());
+    hideWizard();
+  }
+});
+
+wizBack.addEventListener("click", () => {
+  if (currentStep === 2) {
+    setStep(1);
+  }
+});
+
+document.getElementById("fabSetup").onclick = showWizard;
+document.getElementById("fabLang").onclick = () => {
+  const newLang = currentLang === 'en' ? 'am' : 'en';
+  setLanguage(newLang);
+};
+
+// Theme and Layer Toggles
+document.getElementById("fabTheme").onclick = () => {
+  isLightTheme = !isLightTheme;
+  document.body.classList.toggle("light-theme", isLightTheme);
+  
+  const themeText = document.getElementById("themeText");
+  const themeIcon = document.getElementById("themeIcon");
+  
+  if (isLightTheme) {
+    themeText.textContent = t('darkMode');
+    // Moon SVG icon
+    themeIcon.innerHTML = `<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>`;
+  } else {
+    themeText.textContent = t('lightMode');
+    // Sun SVG icon
+    themeIcon.innerHTML = `<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>`;
+  }
+  
+  updateMapLayer();
+};
+
+document.getElementById("fabMapToggle").onclick = () => {
+  isSatellite = !isSatellite;
+  
+  const mapIconText = document.getElementById("mapIconText");
+  const mapIcon = document.getElementById("mapIcon");
+  
+  if (isSatellite) {
+    mapIconText.textContent = t('vectorMap');
+    // Map / Home SVG icon
+    mapIcon.innerHTML = `<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>`;
+  } else {
+    mapIconText.textContent = t('satelliteView');
+    // Globe SVG icon
+    mapIcon.innerHTML = `<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>`;
+  }
+  
+  updateMapLayer();
+};
+
+function updateMapLayer() {
+  if (currentTileLayer) map.removeLayer(currentTileLayer);
+  if (currentLabelsLayer) map.removeLayer(currentLabelsLayer);
+  currentLabelsLayer = null;
+  
+  let url = DARK_TILES;
+  let attr = TILE_ATTR;
+  let nativeZoom = 19;
+  
+  document.body.classList.toggle("satellite-view", isSatellite);
+  
+  if (isSatellite) {
+    url = SATELLITE_TILES;
+    attr = SAT_ATTR;
+    nativeZoom = 18;
+  } else if (isLightTheme) {
+    url = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    nativeZoom = 19;
+  }
+  
+  const finalAttr = `${attr} · ${t('mapAttribution')}`;
+  
+  currentTileLayer = L.tileLayer(url, {
+    attribution: finalAttr,
+    subdomains: isSatellite ? "" : (isLightTheme ? "abc" : "abcd"),
+    maxZoom: 24,
+    maxNativeZoom: nativeZoom,
+    zIndex: 1
+  }).addTo(map);
+  
+  if (isSatellite) {
+    const finalLabelsAttr = `${TILE_ATTR} · ${t('mapAttribution')}`;
+    currentLabelsLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", {
+      attribution: finalLabelsAttr,
+      subdomains: "abcd",
+      maxZoom: 24,
+      maxNativeZoom: 19,
+      zIndex: 2
+    }).addTo(map);
+  }
+
+  // Update Inset Map basemap and styles dynamically
+  if (inset && insetTileLayer) {
+    inset.removeLayer(insetTileLayer);
+    // Use theme-synchronized Vector tiles for high contrast and reliability
+    let insetUrl = isLightTheme ? LIGHT_TILES : DARK_TILES;
+    insetTileLayer = L.tileLayer(insetUrl, { subdomains: "abcd" }).addTo(inset);
+  }
+
+  if (viewportRect) {
+    viewportRect.setStyle({
+      color: isLightTheme ? "var(--accent)" : "var(--gold)",
+      fillColor: isLightTheme ? "var(--accent)" : "var(--gold)",
+      weight: isLightTheme ? 1.5 : 1.2,
+      fillOpacity: isLightTheme ? 0.12 : 0.08
+    });
+  }
+
+  // Update mini-map orbits style dynamically based on theme contrast
+  PLANETS.forEach(p => {
+    const insetRing = insetOrbitLayers[p.key];
+    if (insetRing) {
+      if (isLightTheme) {
+        insetRing.setStyle({ weight: 1.0, opacity: 0.65 });
+      } else {
+        insetRing.setStyle({ weight: 0.8, opacity: 0.35 });
+      }
+    }
+  });
+}
+
+function cleanupModelViewers() {
+  const mvs = document.querySelectorAll('model-viewer');
+  mvs.forEach(mv => {
+    mv.src = '';
+  });
+}
+
+function rebuildSystem(newLat, newLng, newSunDiameterMeters) {
+  cleanupModelViewers();
+  const veil = document.getElementById("veil");
+  veil.classList.remove("gone");
+  veil.querySelector(".l").textContent = t('recalculating');
+  
+  SUN.lat = newLat;
+  SUN.lng = newLng;
+  
+  SCALE = newSunDiameterMeters / (1392000 * 1000);
+  
+  const ratio = Math.round(1 / SCALE);
+  document.getElementById("scaleRatio").textContent = `1 : ${ratio.toLocaleString(currentLang === 'am' ? 'am-ET' : 'en-US')}`;
+  
+  updateScaleDisplay();
+  updateSunLocationDisplay();
+  
+  PLANETS.forEach(p => {
+    p.mapKm = p.realKm * 1e6 * SCALE;
+    p.size = computeIconSize(p.diameter);
+  });
+  
+  planetGroup.clearLayers();
+  orbitGroup.clearLayers();
+  
+  map.removeLayer(sunMarker);
+  
+  sunMarker.setLatLng([SUN.lat, SUN.lng]);
+  sunMarker.setIcon(L.divIcon({
+    className: "sun-ico", iconSize: [SUN_ICON_SIZE, SUN_ICON_SIZE], iconAnchor: [SUN_ICON_SIZE/2, SUN_ICON_SIZE/2],
+    html: getSunIconHtml()
+  }));
+  sunMarker.bindPopup(sunPopupHtml(), { minWidth: 268, maxWidth: 300 });
+  sunMarker.addTo(map);
+  
+  PLANETS.forEach(buildPlanet);
+  
+  PLANETS.forEach(p => {
+    planetGroup.addLayer(planetMarkers[p.key]);
+  });
+  
+  const activeViewBtn = document.querySelector("#viewSeg button.active");
+  const viewMode = activeViewBtn ? activeViewBtn.dataset.view : "inner";
+  applyView(viewMode);
+  
+  updateWalkDisplay();
+  
+  HOME.center = [SUN.lat, SUN.lng];
+  
+  inset.setView([SUN.lat, SUN.lng], inset.getZoom());
+  insetSunCircle.setLatLng([SUN.lat, SUN.lng]);
+  insetSunMarker.setLatLng([SUN.lat, SUN.lng]);
+  
+  // Re-scale and re-center mini-map orbits and reposition dots
+  PLANETS.forEach(p => {
+    const insetRing = insetOrbitLayers[p.key];
+    if (insetRing) {
+      insetRing.setLatLng([SUN.lat, SUN.lng]);
+      insetRing.setRadius(p.mapKm * 1000);
+    }
+  });
+  updatePlanetPositions();
+  
+  const rows = plist.querySelectorAll(".prow");
+  rows.forEach(row => {
+    const key = row.dataset.key;
+    const p = PLANETS.find(x => x.key === key);
+    if (p) {
+      row.querySelector(".km").textContent = p.mapKm < 1 ? `${(p.mapKm * 1000).toFixed(0)} ${t('unitM')}` : `${p.mapKm.toFixed(1)} ${t('unitKm')}`;
+    } else {
+      const r = REGIONS.find(x => x.key === key);
+      if (r) {
+        row.querySelector(".km").textContent = getRegionRangeMapStr(r);
+      }
+    }
+  });
+  
+  
+  regionGroup.clearLayers();
+  REGIONS.forEach(buildRegion);
+  REGIONS.forEach(r => {
+    const row = plist.querySelector(`.prow[data-key="${r.key}"]`);
+    if (row) {
+      if (r.key === 'oort') {
+        const oortInnerKm = r.innerAu * 149.6e6 * SCALE;
+        if (oortInnerKm > 20000) {
+          row.classList.remove("on");
+          row.classList.add("disabled");
+          row.style.opacity = "0.5";
+          row.style.pointerEvents = "none";
+        } else {
+          row.classList.remove("disabled");
+          row.style.opacity = "";
+          row.style.pointerEvents = "";
+        }
+      }
+      
+      if (row.classList.contains("on") && !row.classList.contains("disabled")) {
+        regionGroup.addLayer(regionLayers[r.key]);
+        regionGroup.addLayer(regionMarkers[r.key]);
+      }
+    }
+    
+    // Update mini-map region
+    const insetRing = insetRegionLayers[r.key];
+    if (insetRing) {
+      insetRing.setLatLng([SUN.lat, SUN.lng]);
+      insetRing.setRadius(r.outerAu * 149.6e6 * SCALE * 1000);
+    }
+  });
+
+  const delay = (urlParams.get('test') === 'true') ? 0 : 1000;
+  setTimeout(() => {
+    veil.classList.add("gone");
+    if (viewMode === "inner") {
+      const b = orbitLayers["mars"].getBounds();
+      if (delay === 0) {
+        map.fitBounds(b.pad(0.15), { animate: false });
+      } else {
+        map.flyToBounds(b.pad(0.15), { duration: 1.0 });
+      }
+    } else {
+      if (delay === 0) {
+        const b = orbitLayers["neptune"].getBounds();
+        map.fitBounds(b.pad(0.12), { animate: false });
+      } else {
+        frameAll();
+      }
+    }
+  }, delay);
+}
+
+// Show onboarding wizard on first run
+showWizard();
+
+// =====================================================================
+// Keplerian Orbital Animation Engine & Speed Controller
+// =====================================================================
+
+function highlightOrbit(key, highlight) {
+  const ring = orbitLayers[key];
+  if (ring) {
+    const path = ring.getElement();
+    if (path) {
+      const p = PLANETS.find(x => x.key === key);
+      path.style.setProperty('--orb-color', p ? p.color : 'rgba(255,255,255,0.4)');
+      if (highlight) {
+        path.classList.add("orbit-highlight");
+      } else {
+        path.classList.remove("orbit-highlight");
+      }
+    }
+  }
+  
+  // Highlight mini-map planet dot
+  const dot = document.querySelector(`.inset-planet-dot[data-planet="${key}"]`);
+  if (dot) {
+    if (highlight) {
+      dot.classList.add("highlighted");
+      const insetMk = insetPlanetMarkers[key];
+      if (insetMk) insetMk.openTooltip();
+    } else {
+      dot.classList.remove("highlighted");
+      const insetMk = insetPlanetMarkers[key];
+      if (insetMk) insetMk.closeTooltip();
+    }
+  }
+}
+
+// Compute initial mean anomaly (M0) from the layout bearing (p.angle)
+function initKeplerianState() {
+  PLANETS.forEach(p => {
+    // True anomaly nu0 at t=0 based on initial layout angle
+    const nu0 = ((p.angle - p.perihelion) * Math.PI / 180 + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+    
+    // Eccentric anomaly E0
+    const tanNu2 = Math.tan(nu0 / 2);
+    const E0 = 2 * Math.atan(Math.sqrt((1 - p.ecc) / (1 + p.ecc)) * tanNu2);
+    
+    // Mean anomaly M0
+    p.M0 = E0 - p.ecc * Math.sin(E0);
+  });
+  
+  // Align positions of both maps on initialization
+  updatePlanetPositions();
+}
+
+function solveKepler(M, e) {
+  let E = M;
+  for (let i = 0; i < 5; i++) {
+    E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  }
+  return E;
+}
+
+function getKeplerianState(p, elapsedDays) {
+  // Mean motion n
+  const n = (2 * Math.PI) / p.periodDays;
+  const M = (p.M0 + n * elapsedDays) % (2 * Math.PI);
+  
+  // solve Kepler's equation for E
+  const E = solveKepler(M, p.ecc);
+  
+  // true anomaly nu
+  const nu = 2 * Math.atan2(Math.sqrt(1 + p.ecc) * Math.sin(E / 2), Math.sqrt(1 - p.ecc) * Math.cos(E / 2));
+  
+  // project bearing
+  const bearing = (p.perihelion + nu * 180 / Math.PI + 360) % 360;
+  
+  // project radius
+  const r = p.mapKm * (1 - p.ecc * p.ecc) / (1 + p.ecc * Math.cos(nu));
+  
+  return { r, bearing };
+}
+
+let simDays = 0;
+let simRunning = false;
+let simSpeedDaysPerSec = 1.0;
+const speedPresets = [0.1, 1.0, 10.0, 30.0, 100.0, 365.0, 1000.0];
+
+// Moon initial state (orbits Earth every 27.32 days)
+let moonM0 = 45 * Math.PI / 180; // Start offset angle of 45 degrees
+
+// Helper to position all bodies in both Leaflet maps
+function updatePlanetPositions() {
+  PLANETS.forEach(p => {
+    const state = getKeplerianState(p, simDays);
+    const pos = destination(SUN.lat, SUN.lng, state.r, state.bearing);
+    
+    const mk = planetMarkers[p.key];
+    if (mk) {
+      mk.setLatLng(pos);
+    }
+    
+    const insetMk = insetPlanetMarkers[p.key];
+    if (insetMk) {
+      insetMk.setLatLng(pos);
+    }
+    
+    // Moon
+    if (p.key === "earth") {
+      const moonMapKm = 0.3844 * 1e6 * SCALE;
+      const moonMeanMotion = (2 * Math.PI) / 27.32;
+      const moonM = (moonM0 + moonMeanMotion * simDays) % (2 * Math.PI);
+      const moonBearing = (state.bearing + 45 + moonM * 180 / Math.PI) % 360;
+      const moonPos = destination(pos[0], pos[1], moonMapKm, moonBearing);
+      
+      if (moonMarker) {
+        moonMarker.setLatLng(moonPos);
+      }
+      if (moonOrbitLayer) {
+        moonOrbitLayer.setLatLng(pos);
+        moonOrbitLayer.setRadius(moonMapKm * 1000);
+      }
+    }
+  });
+
+  // Update distance ruler coordinates in real-time if active
+  if (activeRulerLine) {
+    const activePopup = map._popup;
+    if (activePopup && activePopup.isOpen()) {
+      const container = activePopup.getElement();
+      if (container) {
+        const titleEl = container.querySelector('.pp-3d-title-main h2') || container.querySelector('.pp-3d-title h2');
+        const btn = container.querySelector(".pp-btn");
+        if (titleEl || btn) {
+          let key = btn ? btn.dataset.zoom : null;
+          const name = titleEl ? titleEl.textContent.trim().toLowerCase() : "";
+          if (name === "moon") key = "moon";
+          
+          if (key) {
+            let startPos = [SUN.lat, SUN.lng];
+            let endPos = null;
+            if (key === "moon") {
+              const earthPos = planetMarkers["earth"].getLatLng();
+              startPos = [earthPos.lat, earthPos.lng];
+              endPos = moonMarker.getLatLng();
+            } else {
+              const mk = planetMarkers[key];
+              if (mk) endPos = mk.getLatLng();
+            }
+            if (endPos) {
+              activeRulerLine.setLatLngs([startPos, endPos]);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+let lastTime = 0;
+function animLoop(time) {
+  if (!lastTime) lastTime = time;
+  const dt = (time - lastTime) / 1000;
+  lastTime = time;
+  
+  if (simRunning) {
+    simDays += dt * simSpeedDaysPerSec;
+    
+    // Update date label
+    document.getElementById("simDate").textContent = t('epoch').replace('{time}', formatElapsedDays(simDays));
+    
+    // Animate planets
+    updatePlanetPositions();
+  }
+  
+  requestAnimationFrame(animLoop);
+}
+
+// Robust model-viewer load detection: polls for model-viewer elements
+// and listens for their custom 'load' event to fade out 2D fallbacks.
+(function initModelViewerFallbacks() {
+  function wireModelViewer(mv) {
+    if (mv._fallbackWired) return;
+    mv._fallbackWired = true;
+    const fb = mv.previousElementSibling;
+    if (!fb || !fb.classList.contains('planet-fallback')) return;
+
+    // When model-viewer fires its custom 'load' event, hide fallback
+    mv.addEventListener('load', () => {
+      fb.style.opacity = '0';
+      setTimeout(() => { fb.style.display = 'none'; }, 500);
+    });
+
+    // On error, ensure fallback stays visible
+    mv.addEventListener('error', () => {
+      fb.style.opacity = '1';
+      fb.style.display = 'block';
+    });
+
+    // If already loaded (modelIsVisible is true), hide fallback immediately
+    if (mv.modelIsVisible) {
+      fb.style.opacity = '0';
+      setTimeout(() => { fb.style.display = 'none'; }, 500);
+    }
+  }
+
+  // Wire all existing model-viewers
+  function wireAll() {
+    document.querySelectorAll('model-viewer').forEach(wireModelViewer);
+  }
+
+  // Initial wire after a delay (model-viewer is a web component, needs time to upgrade)
+  setTimeout(wireAll, 1000);
+  setTimeout(wireAll, 3000);
+  setTimeout(wireAll, 6000);
+
+  // Also observe for newly added model-viewers (e.g. from popups)
+  const observer = new MutationObserver((mutations) => {
+    for (const mut of mutations) {
+      for (const node of mut.addedNodes) {
+        if (node.nodeType === 1) {
+          if (node.tagName === 'MODEL-VIEWER') wireModelViewer(node);
+          node.querySelectorAll && node.querySelectorAll('model-viewer').forEach(wireModelViewer);
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+
+// Initialize Keplerian values on load
+initKeplerianState();
+setLanguage(currentLang);
+requestAnimationFrame(animLoop);
+
+// Play / Pause Controller
+const simPlayBtn = document.getElementById("simPlayBtn");
+const simPlayIcon = document.getElementById("simPlayIcon");
+const simPlayText = document.getElementById("simPlayText");
+
+simPlayBtn.onclick = () => {
+  simRunning = !simRunning;
+  if (simRunning) {
+    simPlayIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
+    simPlayText.textContent = t('pause');
+    simPlayBtn.classList.add("active");
+  } else {
+    simPlayIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
+    simPlayText.textContent = t('play');
+    simPlayBtn.classList.remove("active");
+  }
+};
+
+// Speed Slider
+const simSpeedRange = document.getElementById("simSpeedRange");
+const simSpeedVal = document.getElementById("simSpeedVal");
+
+simSpeedRange.oninput = () => {
+  const presetIndex = parseInt(simSpeedRange.value);
+  const val = speedPresets[presetIndex];
+  simSpeedDaysPerSec = val;
+  if (val < 1) {
+    simSpeedVal.textContent = `${(val * 24).toFixed(0)} ${t('hrsSec')}`;
+  } else if (val >= 365) {
+    simSpeedVal.textContent = `${(val / 365).toFixed(1)} ${t('yrsSec')}`;
+  } else {
+    simSpeedVal.textContent = `${val.toFixed(0)} ${t('daysSec')}`;
+  }
+};
+
+// Formatter to convert elapsed days to human-readable years, months, and days
+function formatElapsedDays(days) {
+  const years = Math.floor(days / 365.25);
+  const remainingDaysAfterYears = days % 365.25;
+  const months = Math.floor(remainingDaysAfterYears / 30.4);
+  const finalDays = Math.floor(remainingDaysAfterYears % 30.4);
+
+  let parts = [];
+  if (years > 0) {
+    const yrLabel = years > 1 ? t('yrs') : t('yr');
+    parts.push(`${years} ${yrLabel}`);
+  }
+  if (months > 0) {
+    const moLabel = months > 1 ? t('mos') : t('mo');
+    parts.push(`${months} ${moLabel}`);
+  }
+  if (finalDays > 0 || parts.length === 0) {
+    const dayLabel = finalDays !== 1 ? t('daysUnit') : t('dayUnit');
+    parts.push(`${finalDays} ${dayLabel}`);
+  }
+
+  return parts.join(', ');
+}
+
+// Global Keyboard Navigation Shortcuts
+window.addEventListener("keydown", (e) => {
+  // Disable keyboard navigation when typing in form inputs
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) {
+    return;
+  }
+
+  const key = e.key;
+  if (key === " ") {
+    e.preventDefault();
+    const playBtn = document.getElementById("simPlayBtn");
+    if (playBtn) playBtn.click();
+  } else if (key === "Escape") {
+    map.closePopup();
+    hideWizard();
+  } else if (key.toLowerCase() === "r") {
+    resetView();
+  } else if (key.toLowerCase() === "f") {
+    const fitBtn = document.getElementById("fabFit");
+    if (fitBtn) fitBtn.click();
+  } else if (key >= "0" && key <= "9") {
+    if (key === "0") {
+      // Fly to Sun
+      map.flyTo([SUN.lat, SUN.lng], 13, { duration: 1.5 });
+      setTimeout(() => sunMarker.openPopup(), 1550);
+    } else {
+      // Fly to planets 1-9 (Mercury to Pluto)
+      const index = parseInt(key) - 1;
+      if (index >= 0 && index < PLANETS.length) {
+        const p = PLANETS[index];
+        flyToPlanet(p);
+      }
+    }
+  }
+});
+
+if (urlParams.get('test') === 'true') {
+  // Capture console logs and render them in a floating overlay
+  const logs = [];
+  const logOverlay = document.createElement('div');
+  logOverlay.id = 'logOverlay';
+  logOverlay.style = 'position:fixed; bottom:10px; left:10px; right:10px; height:180px; background:rgba(0,0,0,0.85); color:#00ff00; font-family:monospace; font-size:10px; padding:10px; overflow-y:auto; z-index:9999; border:1px solid #00ff00; pointer-events:none; white-space:pre-wrap; line-height:1.3;';
+  document.body.appendChild(logOverlay);
+
+  function addLog(type, args) {
+    const msg = `[${type}] ${Array.from(args).map(x => {
+      try {
+        return typeof x === 'object' ? JSON.stringify(x) : String(x);
+      } catch(e) { return String(x); }
+    }).join(' ')}`;
+    logs.push(msg);
+    logOverlay.innerHTML = logs.join('<br>');
+    logOverlay.scrollTop = logOverlay.scrollHeight;
+  }
+
+  const originalLog = console.log;
+  console.log = function() { originalLog.apply(console, arguments); addLog('LOG', arguments); };
+  const originalError = console.error;
+  console.error = function() { originalError.apply(console, arguments); addLog('ERR', arguments); };
+  const originalWarn = console.warn;
+  console.warn = function() { originalWarn.apply(console, arguments); addLog('WRN', arguments); };
+
+  setTimeout(() => {
+    // Click "Next Step" (Step 1 -> Step 2)
+    const nextBtn = document.getElementById('wizNext');
+    if (nextBtn) nextBtn.click();
+    setTimeout(() => {
+      // Click "Launch Walk 🚀" (Step 2 -> Launch Walk)
+      if (nextBtn) nextBtn.click();
+      
+      // Wait for map to settle, then change size a second time to 20m
+      setTimeout(() => {
+        console.log("TEST: Triggering second wizard setup...");
+        const fabSetup = document.getElementById('fabSetup');
+        if (fabSetup) fabSetup.click();
+        
+        setTimeout(() => {
+          // Select Custom preset card
+          const cards = document.querySelectorAll('.preset-card');
+          const customCard = Array.from(cards).find(c => c.dataset.val === 'custom');
+          if (customCard) customCard.click();
+          
+          // Set custom diameter to 20 meters
+          const customVal = document.getElementById('wizCustomVal');
+          const customUnit = document.getElementById('wizCustomUnit');
+          if (customVal) customVal.value = '20';
+          if (customUnit) customUnit.value = 'm';
+          
+          // Click Next (goes to step 2/Launch Walk since click on fabSetup starts step 1)
+          if (nextBtn) nextBtn.click();
+          
+          setTimeout(() => {
+            // Click "Launch Walk 🚀"
+            console.log("TEST: Launching second walk with 20m Sun...");
+            if (nextBtn) nextBtn.click();
+            
+            // Wait and Zoom to Earth at zoom 16, toggle Light Mode and Satellite View!
+            setTimeout(() => {
+              console.log("TEST: Toggling Light Mode...");
+              const fabTheme = document.getElementById('fabTheme');
+              if (fabTheme) fabTheme.click();
+              
+              console.log("TEST: Toggling Satellite View...");
+              const fabMapToggle = document.getElementById('fabMapToggle');
+              if (fabMapToggle) fabMapToggle.click();
+              
+              console.log(`TEST: Language is set to ${currentLang}`);
+              
+              console.log("TEST: Zooming close to Earth (zoom 16) in Satellite & Light Mode...");
+              const earthLatLng = planetMarkers['earth'].getLatLng();
+              console.log(`TEST: Earth LatLng is ${earthLatLng.lat.toFixed(5)}, ${earthLatLng.lng.toFixed(5)}`);
+              map.stop();
+              map.setView(earthLatLng, 16, { animate: false });
+              console.log(`TEST: Map center is now ${map.getCenter().lat.toFixed(5)}, ${map.getCenter().lng.toFixed(5)}, zoom=${map.getZoom()}`);
+              console.log(`TEST: body className is "${document.body.className}"`);
+              console.log(`TEST: map tile URL is "${currentTileLayer._url}"`);
+              
+              console.log("TEST: Minimizing Simulation controls, Inset Map, and Legend...");
+              minimizeSim();
+              minimizeInset();
+              minimizeLegend();
+            }, 2000);
+          }, 500);
+        }, 500);
+      }, 3000);
+    }, 500);
+  }, 500);
+}
+</script>
+</body>
+</html>
