@@ -229,7 +229,7 @@ window.I18N = {
     "to": "to",
     "fromSun": "from the Sun",
     "scaleTooBig": "Scale too large",
-    "mapAttribution": "Map by <a href=\"https://github.com/ESSS\" target=\"_blank\">ESSS</a> (<a href=\"https://creativecommons.org/licenses/by-sa/4.0/\" target=\"_blank\">CC BY-SA 4.0</a>)"
+    "mapAttribution": "Map by <a href=\"https://github.com/ESSS\" target=\"_blank\">ESSS</a> (<a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\" target=\"_blank\">CC BY-NC-SA 4.0</a> <img src=\"https://mirrors.creativecommons.org/presskit/buttons/80x15/svg/by-nc-sa.svg\" style=\"height:14px;vertical-align:middle;margin-left:3px;\" alt=\"CC BY-NC-SA 4.0\">)"
   },
   "am": {
     "scaleLabel": "ልኬት  1 ሴ.ሜ = 100 ኪ.ሜ",
@@ -460,6 +460,6 @@ window.I18N = {
     "to": "እስከ",
     "fromSun": "ከፀሐይ",
     "scaleTooBig": "ስኬቱ በጣም ትልቅ ነው",
-    "mapAttribution": "ካርታ በ<a href=\"https://github.com/ESSS\" target=\"_blank\">ኢ.ስ.ሳ.ሶ</a> (<a href=\"https://creativecommons.org/licenses/by-sa/4.0/\" target=\"_blank\">CC BY-SA 4.0</a>)"
+    "mapAttribution": "ካርታ በ<a href=\"https://github.com/ESSS\" target=\"_blank\">ኢ.ስ.ሳ.ሶ</a> (<a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\" target=\"_blank\">CC BY-NC-SA 4.0</a> <img src=\"https://mirrors.creativecommons.org/presskit/buttons/80x15/svg/by-nc-sa.svg\" style=\"height:14px;vertical-align:middle;margin-left:3px;\" alt=\"CC BY-NC-SA 4.0\">)"
   }
 };
