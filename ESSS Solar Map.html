@@ -1756,8 +1756,13 @@ function buildPlanet(p){
 
     // Moon distance on map (realMoonKm * 1e6 * SCALE)
     const moonMapKm = moonData.realKm * 1e6 * SCALE;
-    const moonAngle = p.angle + 45; // Place Moon at 45 degrees offset from Earth position
-    const moonPos = destination(pos[0], pos[1], moonMapKm, moonAngle);
+    // Compute Moon's real-time J2000 geocentric bearing
+    const moonT = simDays / 36525.0;
+    const moonL = 218.3164477 + 481267.88123421 * moonT;
+    const moonM_anomaly = 134.963 + 477198.868 * moonT;
+    const moonEclLong = moonL + 6.289 * Math.sin(moonM_anomaly * Math.PI / 180);
+    const moonBearing = (90.0 - moonEclLong + 360.0) % 360.0;
+    const moonPos = destination(pos[0], pos[1], moonMapKm, moonBearing);
 
     // Dotted orbit ring around Earth
     moonOrbitLayer = L.circle(pos, {
@@ -3146,8 +3151,7 @@ let simRunning = false;
 let simSpeedDaysPerSec = 1.0;
 const speedPresets = [0.1, 1.0, 10.0, 30.0, 100.0, 365.0, 1000.0];
 
-// Moon initial state (orbits Earth every 27.32 days)
-let moonM0 = 45 * Math.PI / 180; // Start offset angle of 45 degrees
+
 
 // Helper to position all bodies in both Leaflet maps
 function updatePlanetPositions() {
@@ -3168,9 +3172,11 @@ function updatePlanetPositions() {
     // Moon
     if (p.key === "earth") {
       const moonMapKm = 0.3844 * 1e6 * SCALE;
-      const moonMeanMotion = (2 * Math.PI) / 27.32;
-      const moonM = (moonM0 + moonMeanMotion * simDays) % (2 * Math.PI);
-      const moonBearing = (state.bearing + 45 + moonM * 180 / Math.PI) % 360;
+      const moonT = simDays / 36525.0;
+      const moonL = 218.3164477 + 481267.88123421 * moonT;
+      const moonM_anomaly = 134.963 + 477198.868 * moonT;
+      const moonEclLong = moonL + 6.289 * Math.sin(moonM_anomaly * Math.PI / 180);
+      const moonBearing = (90.0 - moonEclLong + 360.0) % 360.0;
       const moonPos = destination(pos[0], pos[1], moonMapKm, moonBearing);
       
       if (moonMarker) {
