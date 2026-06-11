@@ -1070,6 +1070,10 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" id="simPlayIcon" style="display: block; margin-top: 1px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         <span id="simPlayText">Play</span>
       </button>
+      <button class="btn" id="simResetBtn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin-top: 1.5px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        <span data-i18n="resetToday">Today</span>
+      </button>
     </div>
     <input type="range" id="simSpeedRange" min="0" max="6" step="1" value="2" style="margin: 0 10px;" />
     <span class="val" id="simSpeedVal" style="font-size: 11px; margin-left: 8px; width: 85px; text-align: right; white-space: nowrap;">1 day/sec</span>
@@ -1092,46 +1096,121 @@ let SUN = { lat: 9.0408, lng: 38.7627 };
 // Scale factor: real km -> map km  (Default: Sun is 1 Meter, 1 : 1,392,000,000)
 let SCALE = 1.0 / (1392000 * 1000);
 
+const J2000_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
+let simDays = (Date.now() - J2000_MS) / (1000 * 60 * 60 * 24);
+
 /* Planet data — semi-major axes in million km, diameters in km.
    ecc = orbital eccentricity, perihelion = bearing (deg) of closest approach on map.
    angle = bearing (deg) for planet placement. color = body hue.               */
 const PLANETS = [
   { key:"mercury", color:"#9fa4ad", glow:"#c4c8d0",
     realKm:57.9,  diameter:4879,   moons:0, periodDays: 87.97,
-    ecc:0.2056, perihelion:77,
-    angle:48,  size:36 },
+    ecc:0.2056, perihelion:77, angle:48, size:36,
+    j2000: {
+      a: 0.38709927, a_dot: 0.00000037,
+      e: 0.20563593, e_dot: 0.00001906,
+      i: 7.00497902, i_dot: -0.00594749,
+      L: 252.25032350, L_dot: 149472.67411175,
+      w: 77.45779628, w_dot: 0.16047689,
+      omega: 48.33076593, omega_dot: -0.12534081
+    }
+  },
   { key:"venus",   color:"#e7b35c", glow:"#ffd27a",
     realKm:108.2, diameter:12104,  moons:0, periodDays: 224.70,
-    ecc:0.0068, perihelion:131,
-    angle:118, size:40 },
+    ecc:0.0068, perihelion:131, angle:118, size:40,
+    j2000: {
+      a: 0.72333566, a_dot: 0.00000390,
+      e: 0.00677672, e_dot: -0.00004107,
+      i: 3.39467605, i_dot: -0.00078890,
+      L: 181.97909950, L_dot: 58517.81538729,
+      w: 131.60246718, w_dot: 0.00268329,
+      omega: 76.67984255, omega_dot: -0.27769418
+    }
+  },
   { key:"earth",   color:"#4f9ee0", glow:"#7ec3ff",
     realKm:149.6, diameter:12742,  moons:1, periodDays: 365.25,
-    ecc:0.0167, perihelion:103,
-    angle:205, size:42 },
+    ecc:0.0167, perihelion:103, angle:205, size:42,
+    j2000: {
+      a: 1.00000261, a_dot: 0.00000562,
+      e: 0.01671123, e_dot: -0.00004392,
+      i: -0.00001531, i_dot: -0.01294668,
+      L: 100.46457166, L_dot: 35999.37244981,
+      w: 102.93768193, w_dot: 0.32327364,
+      omega: 0.0, omega_dot: 0.0
+    }
+  },
   { key:"mars",    color:"#d65a3a", glow:"#ff7a52",
     realKm:227.9, diameter:6779,   moons:2, periodDays: 686.98,
-    ecc:0.0934, perihelion:336,
-    angle:312, size:38 },
+    ecc:0.0934, perihelion:336, angle:312, size:38,
+    j2000: {
+      a: 1.52371034, a_dot: 0.00001847,
+      e: 0.09339410, e_dot: 0.00007882,
+      i: 1.84969142, i_dot: -0.00813131,
+      L: 355.44656795, L_dot: 19140.30268499,
+      w: 336.05637041, w_dot: 0.44441088,
+      omega: 49.55953891, omega_dot: -0.29257343
+    }
+  },
   { key:"jupiter", color:"#d9a26b", glow:"#ffc98c",
     realKm:778.6, diameter:142984, moons:101, periodDays: 4332.59,
-    ecc:0.0489, perihelion:15,
-    angle:28,  size:56 },
+    ecc:0.0489, perihelion:15, angle:28, size:56,
+    j2000: {
+      a: 5.20288700, a_dot: -0.00011607,
+      e: 0.04838624, e_dot: -0.00013253,
+      i: 1.30439695, i_dot: -0.00183714,
+      L: 34.39644051, L_dot: 3034.74612775,
+      w: 14.72847983, w_dot: 0.21252668,
+      omega: 100.47390909, omega_dot: 0.20469106
+    }
+  },
   { key:"saturn",  color:"#e3d29a", glow:"#fff0bd",
-    realKm:1433.5,diameter:120536, moons:285, periodDays: 10759.22,
-    ecc:0.0565, perihelion:92,
-    angle:158, size:52, ring:true },
+    realKm:1433.5, diameter:120536, moons:285, periodDays: 10759.22,
+    ecc:0.0565, perihelion:92, angle:158, size:52, ring:true,
+    j2000: {
+      a: 9.53667594, a_dot: -0.00125060,
+      e: 0.05386179, e_dot: -0.00050991,
+      i: 2.48599187, i_dot: 0.00193609,
+      L: 49.95424423, L_dot: 1222.49362201,
+      w: 92.59887831, w_dot: -0.41897216,
+      omega: 113.66242448, omega_dot: -0.28867794
+    }
+  },
   { key:"uranus",  color:"#8fe3e8", glow:"#b6f4f8",
-    realKm:2872.5,diameter:50724,  moons:28, periodDays: 30688.50,
-    ecc:0.0457, perihelion:171,
-    angle:250, size:46 },
+    realKm:2872.5, diameter:50724,  moons:28, periodDays: 30688.50,
+    ecc:0.0457, perihelion:171, angle:250, size:46,
+    j2000: {
+      a: 19.18916464, a_dot: -0.00196176,
+      e: 0.04725744, e_dot: -0.00004397,
+      i: 0.77263783, i_dot: -0.00242939,
+      L: 313.23810451, L_dot: 428.48202785,
+      w: 170.95427630, w_dot: 0.40805281,
+      omega: 74.01692503, omega_dot: 0.04240589
+    }
+  },
   { key:"neptune", color:"#4f6fd9", glow:"#7e98ff",
-    realKm:4495.1,diameter:49244,  moons:16, periodDays: 60182.00,
-    ecc:0.0113, perihelion:45,
-    angle:342, size:46 },
+    realKm:4495.1, diameter:49244,  moons:16, periodDays: 60182.00,
+    ecc:0.0113, perihelion:45, angle:342, size:46,
+    j2000: {
+      a: 30.06992276, a_dot: 0.00026291,
+      e: 0.00859048, e_dot: 0.00005105,
+      i: 1.77004347, i_dot: 0.00035372,
+      L: 304.87997031, L_dot: 218.45945325,
+      w: 44.96476227, w_dot: -0.32241464,
+      omega: 131.78422574, omega_dot: -0.00508664
+    }
+  },
   { key:"pluto",   color:"#c2a07a", glow:"#e3c69e",
-    realKm:5906.4,diameter:2377,   moons:5,  periodDays: 90560.00,
-    ecc:0.2488, perihelion:224,
-    angle:95,  size:28, dwarf:true },
+    realKm:5906.4, diameter:2377,   moons:5,  periodDays: 90560.00,
+    ecc:0.2488, perihelion:224, angle:95, size:28, dwarf:true,
+    j2000: {
+      a: 39.48168677, a_dot: -0.00076912,
+      e: 0.24880766, e_dot: 0.00006465,
+      i: 17.14175, i_dot: 0.003075,
+      L: 238.92881, L_dot: 145.20775,
+      w: 224.06676, w_dot: -0.0367361,
+      omega: 110.30347, omega_dot: -0.0103694
+    }
+  },
 ];
 
 // Compute mapKm (semi-major axis on map in km) from real data and scale
@@ -1204,7 +1283,7 @@ function setLanguage(lang) {
   // Rebuild sim elapsed time if paused
   const simDateEl = document.getElementById("simDate");
   if (simDateEl) {
-    simDateEl.textContent = t('epoch').replace('{time}', formatElapsedDays(simDays));
+    simDateEl.textContent = t('epoch').replace('{time}', formatSimDate(simDays));
   }
 
   // Rebuild planet popups
@@ -1476,20 +1555,39 @@ function getComparableObject(diameterMeters) {
   return `${t('comp_sphere')} (${sizeStr})`;
 }
 
-// Elliptical orbit: distance from focus (Sun) at a given map bearing
-function orbitRadiusAtAngle(semiMajorKm, ecc, perihelionBearing, bearingDeg){
-  const theta = (bearingDeg - perihelionBearing) * Math.PI / 180;
-  return semiMajorKm * (1 - ecc * ecc) / (1 + ecc * Math.cos(theta));
-}
-
-// Generate lat/lng points tracing an elliptical orbit (Sun at one focus)
-function ellipseOrbitPoints(sunLat, sunLng, semiMajorKm, ecc, perihelionBearing, nPoints){
+// Generate lat/lng points tracing a J2000.0 orbit (projected to the ecliptic plane)
+function j2000OrbitPoints(p, nPoints) {
   nPoints = nPoints || 360;
   const pts = [];
-  for (let i = 0; i <= nPoints; i++){
-    const bearing = (360 * i) / nPoints;
-    const r = orbitRadiusAtAngle(semiMajorKm, ecc, perihelionBearing, bearing);
-    pts.push(destination(sunLat, sunLng, r, bearing));
+  const T = simDays / 36525.0;
+  
+  const a = p.j2000.a + p.j2000.a_dot * T;
+  const ecc = p.j2000.e + p.j2000.e_dot * T;
+  const inc = (p.j2000.i + p.j2000.i_dot * T) * Math.PI / 180;
+  const varpi = (p.j2000.w + p.j2000.w_dot * T) * Math.PI / 180;
+  const Omega = (p.j2000.omega + p.j2000.omega_dot * T) * Math.PI / 180;
+  
+  const omega = varpi - Omega;
+  
+  const cosw = Math.cos(omega), sinw = Math.sin(omega);
+  const cosO = Math.cos(Omega), sinO = Math.sin(Omega);
+  const cosi = Math.cos(inc), sini = Math.sin(inc);
+  
+  for (let i = 0; i <= nPoints; i++) {
+    const E = (2 * Math.PI * i) / nPoints;
+    const x_prim = a * (Math.cos(E) - ecc);
+    const y_prim = a * Math.sqrt(1 - ecc * ecc) * Math.sin(E);
+    
+    const x_ecl = x_prim * (cosw * cosO - sinw * sinO * cosi) - y_prim * (sinw * cosO + cosw * sinO * cosi);
+    const y_ecl = x_prim * (cosw * sinO + sinw * cosO * cosi) - y_prim * (sinw * sinO - cosw * cosO * cosi);
+    
+    const r = Math.sqrt(x_ecl * x_ecl + y_ecl * y_ecl);
+    const theta = Math.atan2(y_ecl, x_ecl);
+    const theta_deg = theta * 180 / Math.PI;
+    const bearing = (90.0 - theta_deg + 360.0) % 360.0;
+    
+    const rMapKm = r * 149.5978707 * 1e6 * SCALE;
+    pts.push(destination(SUN.lat, SUN.lng, rMapKm, bearing));
   }
   return pts;
 }
@@ -1621,12 +1719,12 @@ function getSunIconHtml() {
 }
 
 function buildPlanet(p){
-  // Position on the elliptical orbit (Sun at one focus)
-  const r = orbitRadiusAtAngle(p.mapKm, p.ecc, p.perihelion, p.angle);
-  const pos = destination(SUN.lat, SUN.lng, r, p.angle);
+  // Position on the elliptical orbit (J2000 Keplerian projection)
+  const state = getKeplerianState(p, simDays);
+  const pos = destination(SUN.lat, SUN.lng, state.r, state.bearing);
 
   // Elliptical orbit ring
-  const orbitPts = ellipseOrbitPoints(SUN.lat, SUN.lng, p.mapKm, p.ecc, p.perihelion);
+  const orbitPts = j2000OrbitPoints(p);
   const ring = L.polygon(orbitPts, {
     color: p.color, weight: 1.6, opacity: 0.55,
     dashArray: "6 9", fill:true, fillColor:p.color, fillOpacity: 0.025,
@@ -1708,7 +1806,6 @@ function getPopupHeaderHtml(name, am, isDwarf, color, glow, key, isSun = false) 
         <div class="pp-3d-title" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
           <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
           <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
-            <span class="am">${am}</span>
             <span>${typeStr} · ${t('mode2D')}</span>
           </div>
         </div>
@@ -1741,7 +1838,6 @@ function getPopupHeaderHtml(name, am, isDwarf, color, glow, key, isSun = false) 
         <div class="pp-3d-title" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
           <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
           <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
-            <span class="am">${am}</span>
             <span>${typeStr} · ${t('mode2D')}</span>
           </div>
         </div>
@@ -1752,7 +1848,6 @@ function getPopupHeaderHtml(name, am, isDwarf, color, glow, key, isSun = false) 
     <div class="pp-3d-title-main" style="position:absolute; bottom:0; left:0; right:0; padding:12px 14px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none; z-index:10;">
       <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:#fff;">${name}</h2>
       <div class="sub" style="margin-top:4px; font-size:11px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
-        <span class="am">${am}</span>
         <span>${typeStr}</span>
       </div>
     </div>
@@ -1906,8 +2001,7 @@ function regionPopupHtml(r) {
   <div class="pp-3d-box" style="background:${bgGrad}; height:80px; display:flex; align-items:center; justify-content:center;">
     <div style="font-size:32px; text-shadow:0 0 10px ${r.color};">${r.key === 'asteroid' ? '☄️' : (r.key === 'kuiper' ? '❄️' : '☁️')}</div>
     <div class="pp-3d-title-main" style="position:absolute; bottom:0; left:0; right:0; padding:8px 12px; background:linear-gradient(to top, rgba(6,8,20,0.96) 0%, rgba(6,8,20,0.65) 60%, transparent 100%); pointer-events:none;">
-      <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:16px; font-weight:700; color:#fff;">${displayName}</h2>
-      <div class="sub" style="margin-top:2px; font-size:10px; color:var(--muted);">${subName}</div>
+      <h2 style="margin:0; font-family:'Orbitron',sans-serif; font-size:16px; font-weight:700; color:#fff; padding-bottom:4px;">${displayName}</h2>
     </div>
   </div>`;
 
@@ -2783,7 +2877,7 @@ function updateMapLayer() {
   
   if (isSatellite) {
     currentLabelsLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", {
-      attribution: TILE_ATTR,
+      attribution: "",
       subdomains: "abcd",
       maxZoom: 24,
       maxNativeZoom: 19,
@@ -2997,21 +3091,8 @@ function highlightOrbit(key, highlight) {
   }
 }
 
-// Compute initial mean anomaly (M0) from the layout bearing (p.angle)
+// Align positions of both maps on initialization
 function initKeplerianState() {
-  PLANETS.forEach(p => {
-    // True anomaly nu0 at t=0 based on initial layout angle
-    const nu0 = ((p.angle - p.perihelion) * Math.PI / 180 + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
-    
-    // Eccentric anomaly E0
-    const tanNu2 = Math.tan(nu0 / 2);
-    const E0 = 2 * Math.atan(Math.sqrt((1 - p.ecc) / (1 + p.ecc)) * tanNu2);
-    
-    // Mean anomaly M0
-    p.M0 = E0 - p.ecc * Math.sin(E0);
-  });
-  
-  // Align positions of both maps on initialization
   updatePlanetPositions();
 }
 
@@ -3024,26 +3105,43 @@ function solveKepler(M, e) {
 }
 
 function getKeplerianState(p, elapsedDays) {
-  // Mean motion n
-  const n = (2 * Math.PI) / p.periodDays;
-  const M = (p.M0 + n * elapsedDays) % (2 * Math.PI);
+  const T = elapsedDays / 36525.0;
   
-  // solve Kepler's equation for E
-  const E = solveKepler(M, p.ecc);
+  const a = p.j2000.a + p.j2000.a_dot * T;
+  const ecc = p.j2000.e + p.j2000.e_dot * T;
+  const inc = (p.j2000.i + p.j2000.i_dot * T) * Math.PI / 180;
+  const L = (p.j2000.L + p.j2000.L_dot * T) * Math.PI / 180;
+  const varpi = (p.j2000.w + p.j2000.w_dot * T) * Math.PI / 180;
+  const Omega = (p.j2000.omega + p.j2000.omega_dot * T) * Math.PI / 180;
   
-  // true anomaly nu
-  const nu = 2 * Math.atan2(Math.sqrt(1 + p.ecc) * Math.sin(E / 2), Math.sqrt(1 - p.ecc) * Math.cos(E / 2));
+  const omega = varpi - Omega;
+  const M = L - varpi;
   
-  // project bearing
-  const bearing = (p.perihelion + nu * 180 / Math.PI + 360) % 360;
+  // Solve Kepler's equation
+  const E = solveKepler(M, ecc);
   
-  // project radius
-  const r = p.mapKm * (1 - p.ecc * p.ecc) / (1 + p.ecc * Math.cos(nu));
+  // Coordinates in orbital plane
+  const x_prim = a * (Math.cos(E) - ecc);
+  const y_prim = a * Math.sqrt(1 - ecc * ecc) * Math.sin(E);
   
-  return { r, bearing };
+  // Transform to J2000 ecliptic coordinates
+  const cosw = Math.cos(omega), sinw = Math.sin(omega);
+  const cosO = Math.cos(Omega), sinO = Math.sin(Omega);
+  const cosi = Math.cos(inc), sini = Math.sin(inc);
+  
+  const x_ecl = x_prim * (cosw * cosO - sinw * sinO * cosi) - y_prim * (sinw * cosO + cosw * sinO * cosi);
+  const y_ecl = x_prim * (cosw * sinO + sinw * cosO * cosi) - y_prim * (sinw * sinO - cosw * cosO * cosi);
+  
+  const r = Math.sqrt(x_ecl * x_ecl + y_ecl * y_ecl);
+  const theta = Math.atan2(y_ecl, x_ecl);
+  const theta_deg = theta * 180 / Math.PI;
+  
+  const bearing = (90.0 - theta_deg + 360.0) % 360.0;
+  const rMapKm = r * 149.5978707 * 1e6 * SCALE;
+  
+  return { r: rMapKm, bearing };
 }
 
-let simDays = 0;
 let simRunning = false;
 let simSpeedDaysPerSec = 1.0;
 const speedPresets = [0.1, 1.0, 10.0, 30.0, 100.0, 365.0, 1000.0];
@@ -3129,7 +3227,7 @@ function animLoop(time) {
     simDays += dt * simSpeedDaysPerSec;
     
     // Update date label
-    document.getElementById("simDate").textContent = t('epoch').replace('{time}', formatElapsedDays(simDays));
+    document.getElementById("simDate").textContent = t('epoch').replace('{time}', formatSimDate(simDays));
     
     // Animate planets
     updatePlanetPositions();
@@ -3213,6 +3311,19 @@ simPlayBtn.onclick = () => {
   }
 };
 
+// Today Reset Controller
+const simResetBtn = document.getElementById("simResetBtn");
+if (simResetBtn) {
+  simResetBtn.onclick = () => {
+    simDays = (Date.now() - J2000_MS) / (1000 * 60 * 60 * 24);
+    updatePlanetPositions();
+    const simDateEl = document.getElementById("simDate");
+    if (simDateEl) {
+      simDateEl.textContent = t('epoch').replace('{time}', formatSimDate(simDays));
+    }
+  };
+}
+
 // Speed Slider
 const simSpeedRange = document.getElementById("simSpeedRange");
 const simSpeedVal = document.getElementById("simSpeedVal");
@@ -3230,28 +3341,18 @@ simSpeedRange.oninput = () => {
   }
 };
 
-// Formatter to convert elapsed days to human-readable years, months, and days
-function formatElapsedDays(days) {
-  const years = Math.floor(days / 365.25);
-  const remainingDaysAfterYears = days % 365.25;
-  const months = Math.floor(remainingDaysAfterYears / 30.4);
-  const finalDays = Math.floor(remainingDaysAfterYears % 30.4);
-
-  let parts = [];
-  if (years > 0) {
-    const yrLabel = years > 1 ? t('yrs') : t('yr');
-    parts.push(`${years} ${yrLabel}`);
+// Formatter to convert simulation elapsed days to local calendar date string (Gregorian for EN, Ethiopic for AM)
+function formatSimDate(days) {
+  const date = new Date(J2000_MS + days * 24 * 60 * 60 * 1000);
+  try {
+    if (currentLang === 'am') {
+      return new Intl.DateTimeFormat('am-ET', { calendar: 'ethiopic', year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+    } else {
+      return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric' }).format(date);
+    }
+  } catch (e) {
+    return date.toDateString();
   }
-  if (months > 0) {
-    const moLabel = months > 1 ? t('mos') : t('mo');
-    parts.push(`${months} ${moLabel}`);
-  }
-  if (finalDays > 0 || parts.length === 0) {
-    const dayLabel = finalDays !== 1 ? t('daysUnit') : t('dayUnit');
-    parts.push(`${finalDays} ${dayLabel}`);
-  }
-
-  return parts.join(', ');
 }
 
 // Global Keyboard Navigation Shortcuts

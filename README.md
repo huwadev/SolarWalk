@@ -10,12 +10,12 @@ An interactive, highly precise, physics-based 3D/2D scale model of the Solar Sys
 ## 🚀 Key Features
 
 * **Universal Setup Wizard**: Drag the Sun to any point on the map (defaulting to the ESSS Office at AAU CTBE 5 Kilo) or search for cities/addresses globally. Select from various Sun diameter presets (from a 1.6 cm Marble to a 1 Meter Ball) or enter a custom size.
-* **Physics-Based Keplerian Engine**: Planets and satellites orbit along true elliptical paths derived from their orbital periods and eccentricities, solving Kepler's equation in real-time.
+* **Physics-Based Keplerian Engine**: Planets and satellites orbit along true J2000.0 Keplerian paths derived from official NASA JPL Mean Orbital Elements and their centennial rates of change. Real-world planetary locations are calculated analytically relative to the J2000.0 epoch and synchronized dynamically to the actual calendar date (defaulting to today's date).
 * **Interactive 3D Leaflet Markers**: Sun, planets, and the Moon render as live, rotating 3D models directly on the map. Features a fallback to 2D CSS spheres when loaded as a local file (`file://`) under browser CORS restrictions.
 * **Bilingual Support (አማርኛ & English)**: Fully localized UI controls, labels, and text. Planet names in Amharic use traditional Ethiopic terminology (*አጣርድ, ዝሁራ, መሬት, መሪህ, መሽተሪ, ማኅፈድ, ኡራኑስ, ኔፕቱን, ፕሉቶ*).
 * **Cosmic Belts & Clouds**: Interactive glassmorphic regions for the Asteroid Belt, Kuiper Belt, and Oort Cloud, dynamically synchronizing visibility and scale checks.
 * **Scale-Independent Zooming**: Click "Inner planets" or individual planets to instantly center and zoom the viewport to their exact orbital bounding boxes.
-* **Bespoke Simulation Controls**: Time elapsed calendars tracking years, months, and days, with custom speed levels (e.g. 1 day/sec to 1 year/sec).
+* **Bespoke Simulation Controls**: A dynamic calendar display showing standard Gregorian dates in English mode and traditional Ethiopian dates (e.g., *4 ሰኔ 2018*) in Amharic mode. Includes custom speed levels (0.1 days/sec to 1,000 days/sec) and a "Today" button to instantly sync the simulation time back to the real-world date.
 * **Global Navigation Inset Mini-Map**: Small, high-contrast visualizer displaying orbital positions, hover highlights, and drag-and-pan geographic shortcuts.
 
 ---
@@ -28,7 +28,7 @@ This project is built using modern, lightweight, client-side technologies to del
 * **Application Logic**: Vanilla JavaScript (ES6+ modular design, local storage preference caching, custom state management).
 * **Mapping Engine**: [Leaflet.js](https://leafletjs.com/) (handles geographic coordinate projections, custom interactive overlays, and zoom/pan bounding calculations).
 * **3D Visualizations**: Google's [`<model-viewer>`](https://modelviewer.dev/) (WebXR-ready component utilizing WebGL to stream and render interactive, rotating GLTF/GLB models dynamically).
-* **Physics & Mathematics**: Live Keplerian Orbit Engine solving Kepler's Equation ($M = E - e \sin E$) in real-time to project high-precision planet positions along elliptical paths.
+* **Physics & Mathematics**: High-precision Keplerian Orbit Engine utilizing NASA JPL J2000.0 Mean Orbital Elements and centennial rates. Projects positions by solving Kepler's Equation ($M = E - e \sin E$) in the 3D orbital plane and applying coordinate rotation matrices to project planets onto the 2D ecliptic plane.
 
 ---
 
@@ -150,12 +150,12 @@ You can deploy this directory to any static hosting provider. The folder contain
 
 ---
 
-## 👥 Credits & Acknowledgement
+## 👥 Credits & Acknowledgements
 
-We would like to express our gratitude to the contributors of this project:
-* **Lealem K. Alula**: Handcrafted and configured the beautiful 3D planetary models (`.glb` assets).
-* **Hibreselam D.**: Created the initial 2D project codebase and conceptual layout.
-* **Kirubel M.**: Engineered the entire physics engine, bilingual system, orbital mechanics, interface systems, and integration.
+* **Kirubel M.**: Full project engineering & orbital mechanics.
+* **Lealem K. Alula**: Handcrafted 3D models.
+* **Hibreselam D.**: Initial codebase & layout.
+* **Livia Giacomini**: Inspiration from "Space Walk: Walking the Solar System in Your City".
 
 ---
 
