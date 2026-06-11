@@ -20,24 +20,63 @@ An interactive, highly precise, physics-based 3D/2D scale model of the Solar Sys
 
 ---
 
-## 🛠️ How to Run Locally
+## 💻 Tech Stack
 
-Because the application uses WebGL/gltf models via Google's `<model-viewer>`, modern web browsers prevent loading files from local filesystems (`file://`) due to CORS security policies. 
+This project is built using modern, lightweight, client-side technologies to deliver a fluid, native-like experience without backend overhead:
 
-To experience the full interactive 3D rendering, run a local HTTP web server in the project directory:
+* **Core Structure & Styling**: HTML5 & Vanilla CSS3 (featuring glassmorphism, responsive grid layouts, custom variable-based dark/light themes, and keyframe animations).
+* **Application Logic**: Vanilla JavaScript (ES6+ modular design, local storage preference caching, custom state management).
+* **Mapping Engine**: [Leaflet.js](https://leafletjs.com/) (handles geographic coordinate projections, custom interactive overlays, and zoom/pan bounding calculations).
+* **3D Visualizations**: Google's [`<model-viewer>`](https://modelviewer.dev/) (WebXR-ready component utilizing WebGL to stream and render interactive, rotating GLTF/GLB models dynamically).
+* **Physics & Mathematics**: Live Keplerian Orbit Engine solving Kepler's Equation ($M = E - e \sin E$) in real-time to project high-precision planet positions along elliptical paths.
 
-### Using Python (Easiest)
-Run this command in your terminal/powershell:
+---
+
+## 📋 Environment & Prerequisites
+
+Since the ESSS Solar Walk Map is a **serverless, fully static client-side application**, it does not require database instances, environment variable secrets (`.env`), or server-side compilers.
+
+### What you need:
+1. **A Web Browser**: Any modern browser with WebGL enabled (Google Chrome, Mozilla Firefox, Microsoft Edge, or Apple Safari).
+2. **A Local HTTP Server (For 3D Models)**: 
+   > [!IMPORTANT]
+   > Web browsers block loading 3D asset files (`.glb`) under direct filesystem URLs (`file://`) due to CORS security restrictions. You **must** run a lightweight local HTTP server or host it on a web server to see the interactive 3D rotating planet models. Otherwise, the app automatically falls back to 2D CSS planetary indicators.
+
+---
+
+## 🛠️ Step-by-Step Guide to Run Locally
+
+Follow these steps to run the application on your computer:
+
+### Step 1: Download the Codebase
+Download or clone the files from this GitHub repository:
+```bash
+git clone https://github.com/huwadev/SolarWalk.git
+cd SolarWalk
+```
+
+### Step 2: Launch a Local Server
+Choose **one** of the methods below to serve the files locally:
+
+#### Method A: Using Python (Recommended)
+If you have Python installed, run this command in your project directory:
 ```bash
 python -m http.server 8000
 ```
-Then open your browser and navigate to:
-[http://localhost:8000/ESSS%20Solar%20Map.html](http://localhost:8000/ESSS%20Solar%20Map.html)
 
-### Using Node.js / npm
+#### Method B: Using Node.js (npm)
+If you have Node.js installed, run:
 ```bash
 npx serve
 ```
+
+#### Method C: Using Visual Studio Code
+If you use VS Code, install the **Live Server** extension. Then, open the project folder in VS Code, right-click `ESSS Solar Map.html`, and select **Open with Live Server**.
+
+### Step 3: Open in Browser
+Once your server is running, open your web browser and navigate to:
+* For Python/Node.js: [http://localhost:8000/ESSS%20Solar%20Map.html](http://localhost:8000/ESSS%20Solar%20Map.html)
+* For Live Server: It will open automatically (usually on port 5500).
 
 ---
 
@@ -108,6 +147,15 @@ You can deploy this directory to any static hosting provider. The folder contain
 * `[0]` — Fly to the Sun
 * `[1]` - `[9]` — Fly to Mercury (1) through Pluto (9) and open details popup
 * `[Escape]` — Dismiss open popups, panels, or wizard
+
+---
+
+## 👥 Credits & Acknowledgement
+
+We would like to express our gratitude to the contributors of this project:
+* **Lealem K. Alula**: Handcrafted and configured the beautiful 3D planetary models (`.glb` assets).
+* **Hibreselam D.**: Created the initial 2D project codebase and conceptual layout.
+* **Kirubel M.**: Engineered the entire physics engine, bilingual system, orbital mechanics, interface systems, and integration.
 
 ---
 
