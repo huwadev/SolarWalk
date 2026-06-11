@@ -41,6 +41,52 @@ npx serve
 
 ---
 
+## 🌐 Hosting on a Live Website
+
+Since this is a client-side static web application (HTML, CSS, JavaScript), hosting it on a live website is straightforward. 
+
+### 1. Static Web Hosting Providers
+You can deploy this directory to any static hosting provider. The folder contains all required static assets (HTML, JS, and the 3D models directory `Planet model`).
+* **GitHub Pages**: Go to your repository settings -> **Pages** -> Under Build and deployment, choose the **main** branch -> Save. Your site will be live at `https://<your-username>.github.io/SolarWalk/ESSS%20Solar%20Map.html`.
+* **Vercel / Netlify / Cloudflare Pages**: Connect your GitHub repository to these platforms, leave the build command empty (or none), and set the publish directory to `./`.
+
+### 2. Standard Web Servers (Apache, Nginx, IIS)
+Upload the entire project folder (including `ESSS Solar Map.html`, `translations.js`, and the `Planet model` folder) to your web server's public root directory (e.g., `public_html` or `/var/www/html/`).
+
+### 3. Handling 3D Model MIME Types (.glb)
+Because the app loads 3D planet models dynamically using `<model-viewer>`, some web servers (like Microsoft IIS or custom Apache/Nginx configurations) might fail to serve the `.glb` files if they do not recognize their MIME type, causing the planets to render in 2D fallback mode.
+
+Ensure your server is configured with the correct MIME type for `.glb` files:
+* **MIME Type**: `model/gltf-binary`
+* **File Extension**: `.glb`
+
+#### Config Snippets:
+
+* **Apache (.htaccess)**
+  ```apache
+  AddType model/gltf-binary .glb
+  ```
+
+* **Nginx (mime.types)**
+  ```nginx
+  types {
+      model/gltf-binary glb;
+  }
+  ```
+
+* **IIS (web.config)**
+  ```xml
+  <configuration>
+    <system.webServer>
+      <staticContent>
+        <mimeMap fileExtension=".glb" mimeType="model/gltf-binary" />
+      </staticContent>
+    </system.webServer>
+  </configuration>
+  ```
+
+---
+
 ## 💡 Keyboard Shortcuts
 
 * `[Space]` — Play / Pause orbital simulation
