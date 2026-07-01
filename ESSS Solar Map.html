@@ -2768,23 +2768,67 @@ wizSearch.addEventListener("keydown", (e) => {
 
 // GPS functionality
 wizGPSBtn.addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    wizLocStatus.innerHTML = t('gpsNotSupported');
+  // Check if secure context is available (Geolocation requires HTTPS, localhost, or 127.0.0.1)
+  const isSecure = window.location.protocol === 'https:' || 
+                   window.location.hostname === 'localhost' || 
+                   window.location.hostname === '127.0.0.1';
+  
+  if (!isSecure && window.location.protocol !== 'http:') {
+    wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('gpsSecureContextRequired')}</span>`;
     return;
   }
+
+  if (!navigator.geolocation) {
+    wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('gpsNotSupported')}</span>`;
+    return;
+  }
+  
   wizLocStatus.innerHTML = t('locating');
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      tempSunLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      tempSunMarker.setLatLng(tempSunLatLng);
-      updateWizLocStatus();
-      map.flyTo([tempSunLatLng.lat, tempSunLatLng.lng], 15, { duration: 1.0 });
-    },
-    (err) => {
-      console.error(err);
-      wizLocStatus.innerHTML = t('couldNotGps');
+  
+  const options = {
+    enableHighAccuracy: true,
+    timeout: 7000, // 7 seconds timeout for high-accuracy GPS
+    maximumAge: 0
+  };
+  
+  function successCallback(pos) {
+    tempSunLatLng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    tempSunMarker.setLatLng(tempSunLatLng);
+    updateWizLocStatus();
+    map.flyTo([tempSunLatLng.lat, tempSunLatLng.lng], 15, { duration: 1.0 });
+  }
+  
+  function errorCallback(err) {
+    console.error("Geolocation Error:", err);
+    if (err.code === 3) {
+      // Timeout - retry immediately with low accuracy (network triangulation)
+      wizLocStatus.innerHTML = t('gpsTimeout');
+      navigator.geolocation.getCurrentPosition(
+        successCallback,
+        (secondErr) => {
+          console.error("Geolocation Secondary Error:", secondErr);
+          wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('couldNotGps')}</span>`;
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+      );
+    } else if (err.code === 1) {
+      // Permission Denied (blocked by user or browser policy)
+      wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('gpsPermissionDenied')}</span>`;
+    } else if (err.code === 2) {
+      // Position Unavailable - retry with low accuracy (network triangulation)
+      navigator.geolocation.getCurrentPosition(
+        successCallback,
+        (secondErr) => {
+          wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('gpsPositionUnavailable')}</span>`;
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+      );
+    } else {
+      wizLocStatus.innerHTML = `<span style="color: #ff453a;">${t('couldNotGps')}</span>`;
     }
-  );
+  }
+
+  navigator.geolocation.getCurrentPosition(successCallback, errorCallback, options);
 });
 
 // Navigation buttons
