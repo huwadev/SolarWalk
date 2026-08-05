@@ -155,6 +155,7 @@ You can deploy this directory to any static hosting provider. The folder contain
 * **Kirubel M.**: Full project engineering & orbital mechanics.
 * **Lealem K. Alula**: Handcrafted 3D models.
 * **Hibreselam D.**: Initial codebase & layout.
+* **[Solar System Scope](https://www.solarsystemscope.com/textures/)**: Planet texture maps, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 * **Livia Giacomini**: Inspiration from "Space Walk: Walking the Solar System in Your City".
 
 ---
