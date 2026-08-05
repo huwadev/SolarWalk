@@ -75,6 +75,14 @@
     background:var(--panel);backdrop-filter:blur(14px);
     border:1px solid var(--stroke);box-shadow:var(--shadow);
     max-width:calc(100vw - 28px);
+    transition:opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1), visibility 0.25s;
+  }
+  #topbar.collapsed, #topbar.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -12px) scale(0.95);
+    visibility: hidden;
+    display: none !important;
   }
   #topbar .badge{
     display:flex;align-items:center;gap:9px;padding:5px 12px 5px 8px;border-radius:999px;
@@ -448,15 +456,15 @@
   #veil .o{width:60px;height:60px;border:2px solid rgba(120,170,255,.25);border-top-color:var(--gold);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Position Leaflet zoom controls cleanly at bottom-left */
+  /* Position Leaflet zoom controls cleanly right above simulation controls at left: 14px */
   .leaflet-bottom.leaflet-left {
-    bottom: 24px !important;
+    bottom: 124px !important;
     left: 14px !important;
-    transition: bottom 0.25s ease, left 0.25s ease;
+    transition: bottom 0.25s ease;
   }
   body.sim-minimized .leaflet-bottom.leaflet-left {
-    bottom: 24px !important;
-    left: 68px !important;
+    bottom: 74px !important;
+    left: 14px !important;
   }
 
   /* Right Floating Actions Stack Collapse */
@@ -474,6 +482,7 @@
   @media (max-width:1024px){
     #inset{display:none;}
     #topbar{top:auto;bottom:84px;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 12px;}
+    #topbar.collapsed, #topbar.hidden { transform: translate(-50%, 12px) scale(0.95); }
     #topbar .meta .s{display:none;}
     #legend{width:calc(100vw - 28px);}
     .fab-stack{bottom:14px;gap:6px;}
@@ -951,6 +960,9 @@
     <span class="k" id="scaleDesc" data-i18n="scaleLabel">Scale&nbsp; 1&nbsp;cm = 100&nbsp;km</span>
     <span class="s" data-i18n="sunLocation">☀ Sun sits at ESSS Office, AAU CTBE 5 Kilo</span>
   </div>
+  <button class="panel-close-btn" id="btnTopbarClose" title="Hide Scale Bar" style="position:relative; top:0; right:0; margin-left:4px; width:18px; height:18px; flex:none;">
+    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
 </div>
 
 <!-- Legend / control panel -->
@@ -1680,6 +1692,10 @@ map.on("click", (e) => {
   if (fabStack && !fabStack.classList.contains("collapsed")) {
     fabStack.classList.add("collapsed");
     if (typeof fabStackCollapsed !== "undefined") fabStackCollapsed = true;
+  }
+  const topbar = document.getElementById("topbar");
+  if (topbar && !topbar.classList.contains("collapsed")) {
+    topbar.classList.add("collapsed");
   }
 });
 
@@ -2558,6 +2574,16 @@ if (fabStackBtn) {
     fabStackCollapsed = !fabStackCollapsed;
     const fabStack = document.querySelector(".fab-stack");
     if (fabStack) fabStack.classList.toggle("collapsed", fabStackCollapsed);
+    const topbar = document.getElementById("topbar");
+    if (topbar && !fabStackCollapsed) topbar.classList.remove("collapsed");
+  });
+}
+
+const btnTopbarClose = document.getElementById("btnTopbarClose");
+if (btnTopbarClose) {
+  btnTopbarClose.addEventListener("click", (e) => {
+    e.stopPropagation();
+    document.getElementById("topbar").classList.add("collapsed");
   });
 }
 
