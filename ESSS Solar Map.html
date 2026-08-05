@@ -987,11 +987,11 @@
     <span id="themeText" data-i18n="lightMode">Light Mode</span>
   </button>
   <button class="fab" id="fabSetup" title="Configure Sun Location">
-    <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="4" fill="var(--gold)"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
     <span data-i18n="configureSun">Configure Sun</span>
   </button>
   <button class="fab" id="fabReset" title="Reset View">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
     <span data-i18n="resetView">Reset view</span>
   </button>
   <button class="fab" id="fabFit" title="Frame All Orbits">
@@ -999,7 +999,7 @@
     <span data-i18n="frameAll">Frame all orbits</span>
   </button>
   <button class="fab" id="fabLang" title="Change Language / ቋንቋ ቀይር">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="2" y1="16" x2="22" y2="16"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 5h7M7 3v2c0 3.5-2 6.5-5 8M9 9c-1 2.5-3 5-6 6"/><path d="M14 19l4-9 4 9M15.5 16h5"/></svg>
     <span data-i18n="language">አማርኛ</span>
   </button>
 </div>
@@ -2478,14 +2478,24 @@ function maximizeLegend() {
 
 function minimizeSim() {
   simDashboardMinimized = true;
-  document.getElementById("sim-dash").classList.add("minimized");
-  document.getElementById("btnSimOpen").classList.remove("hidden-btn");
+  const simDash = document.getElementById("sim-dash");
+  const btnOpen = document.getElementById("btnSimOpen");
+  if (simDash) {
+    simDash.classList.add("minimized");
+    simDash.classList.add("hidden");
+  }
+  if (btnOpen) btnOpen.classList.remove("hidden-btn");
   document.body.classList.add("sim-minimized");
 }
 function maximizeSim() {
   simDashboardMinimized = false;
-  document.getElementById("sim-dash").classList.remove("minimized");
-  document.getElementById("btnSimOpen").classList.add("hidden-btn");
+  const simDash = document.getElementById("sim-dash");
+  const btnOpen = document.getElementById("btnSimOpen");
+  if (simDash) {
+    simDash.classList.remove("minimized");
+    simDash.classList.remove("hidden");
+  }
+  if (btnOpen) btnOpen.classList.add("hidden-btn");
   document.body.classList.remove("sim-minimized");
 }
 
@@ -2680,12 +2690,9 @@ function hideWizard() {
   wizardOverlay.classList.add("hidden");
   wizardOverlay.classList.remove("floating");
   if (simDashboardMinimized) {
-    document.getElementById("btnSimOpen").classList.remove("hidden-btn");
-    document.getElementById("sim-dash").classList.add("minimized");
-    document.body.classList.add("sim-minimized");
+    minimizeSim();
   } else {
-    document.getElementById("sim-dash").classList.remove("hidden");
-    document.body.classList.remove("sim-minimized");
+    maximizeSim();
   }
   if (tempSunMarker) map.removeLayer(tempSunMarker);
   if (previewOrbitCircle) map.removeLayer(previewOrbitCircle);
