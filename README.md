@@ -82,24 +82,36 @@ Once your server is running, open your web browser and navigate to:
 
 ## 🌐 Hosting on a Live Website
 
-Since this is a client-side static web application (HTML, CSS, JavaScript), hosting it on a live website is straightforward. 
+Since this is a client-side static web application (HTML, CSS, JavaScript), hosting it on a live website is straightforward.
 
-### 1. Static Web Hosting Providers
-You can deploy this directory to any static hosting provider. The folder contains all required static assets (HTML, JS, and the 3D models directory `Planet model`).
-* **GitHub Pages**: Go to your repository settings -> **Pages** -> Under Build and deployment, choose the **main** branch -> Save. Your site will be live at `https://<your-username>.github.io/SolarWalk/ESSS%20Solar%20Map.html`.
-* **Vercel / Netlify / Cloudflare Pages**: Connect your GitHub repository to these platforms, leave the build command empty (or none), and set the publish directory to `./`.
+> [!NOTE]
+> **HTTPS Requirement for GPS**: Modern web browsers require a **Secure Context (HTTPS)** or `localhost` to enable GPS Geolocation (`navigator.geolocation`). Live deployment domains must be served over HTTPS (enabled by default on GitHub Pages, Vercel, Netlify, and Cloudflare Pages).
+
+### 1. Static Web Hosting Providers (Recommended)
+You can deploy this directory directly to any static hosting provider. The repository contains all required static assets (HTML, JS, and the 3D models directory `Planet model`).
+
+* **GitHub Pages**:
+  1. Go to your repository settings -> **Pages**.
+  2. Under **Build and deployment** -> **Source**, select **Deploy from a branch**.
+  3. Under **Branch**, select `main` and `/ (root)` -> Click **Save**.
+  4. Your site will be live at: `https://<your-username>.github.io/SolarWalk/ESSS%20Solar%20Map.html`
+  *(Note: GitHub Pages automatically serves `.glb` 3D model files with correct MIME types out of the box).*
+* **Vercel / Netlify / Cloudflare Pages**:
+  1. Connect your GitHub repository (`huwadev/SolarWalk`) to the platform.
+  2. Leave the build command empty (or none), and set the output/publish directory to `./`.
+  3. Deployments automatically support HTTPS and `.glb` static asset streaming.
 
 ### 2. cPanel (Shared Web Hosting)
 * **File Upload**: 
   1. Login to your cPanel dashboard and open **File Manager**.
   2. Navigate to your domain's document root (typically `public_html` or a subdomain folder).
-  3. Upload the entire project directory structure (`ESSS Solar Map.html`, `translations.js`, and the `Planet model` folder).
-* **MIME Configuration**:
-  * By default, many cPanel/Apache setups serve `.glb` files as plain text or block them. To fix this, create a file named `.htaccess` in the same directory and add:
+  3. Upload the entire project directory structure (`ESSS Solar Map.html`, `translations.js`, `Planet model/`, etc.).
+* **MIME & SSL Configuration**:
+  * Apache/cPanel servers might block or serve `.glb` files as plain text by default. To fix this, create a file named `.htaccess` in your site's root directory:
     ```apache
     AddType model/gltf-binary .glb
     ```
-  * Alternatively, search for the **MIME Types** tool in cPanel, and add a new user-defined MIME type with `model/gltf-binary` as the Type and `glb` as the Extension.
+  * Ensure SSL (Let's Encrypt / AutoSSL) is enabled on your cPanel domain so GPS location requests function properly.
 
 ### 3. Microsoft Azure
 * **Azure Static Web Apps (Recommended)**:
@@ -107,12 +119,12 @@ You can deploy this directory to any static hosting provider. The folder contain
   2. Connect it to your GitHub repository (`huwadev/SolarWalk`).
   3. Under the build options, choose **Custom**:
      * **App location**: `/`
-     * **Api location**: (leave empty)
-     * **Output location**: `/` (or leave empty)
-  4. Azure will automatically provision a GitHub Actions workflow that builds and deploys your files on every push.
-* **Azure App Service (Windows/IIS)**:
-  * When hosting on a Windows-based Azure App Service, the IIS web server blocks files with unconfigured extensions (like `.glb`) by default.
-  * To fix this, a custom configuration file named `web.config` is included in the project root containing:
+     * **Api location**: *(leave empty)*
+     * **Output location**: `/` *(or leave empty)*
+  4. Azure automatically provisions a GitHub Actions workflow that builds and deploys your files on every commit.
+* **Azure App Service (Windows / IIS)**:
+  * Windows IIS web servers block unknown file extensions (like `.glb`) by default.
+  * A pre-configured `web.config` file is included in the root directory to handle `.glb` MIME mapping automatically:
     ```xml
     <?xml version="1.0" encoding="utf-8"?>
     <configuration>
@@ -125,12 +137,12 @@ You can deploy this directory to any static hosting provider. The folder contain
     </configuration>
     ```
 
-### 4. Other Standard Web Servers
-* **Apache**: Enable the mime module and configure `.glb` types inside your server configuration or a local `.htaccess` file:
+### 4. Custom Apache / Nginx Web Servers
+* **Apache**: Add the MIME type inside your site configuration or `.htaccess`:
   ```apache
   AddType model/gltf-binary .glb
   ```
-* **Nginx**: Define the MIME type inside your `mime.types` file or local block:
+* **Nginx**: Add `.glb` to your `mime.types` file or server block:
   ```nginx
   types {
       model/gltf-binary glb;
