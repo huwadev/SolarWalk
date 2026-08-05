@@ -962,9 +962,6 @@
     <span class="k" id="scaleDesc" data-i18n="scaleLabel">Scale&nbsp; 1&nbsp;cm = 100&nbsp;km</span>
     <span class="s" data-i18n="sunLocation">☀ Sun sits at ESSS Office, AAU CTBE 5 Kilo</span>
   </div>
-  <button class="panel-close-btn" id="btnTopbarClose" title="Hide Scale Bar" style="position:relative; top:0; right:0; margin-left:4px; width:18px; height:18px; flex:none;">
-    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
 </div>
 
 <!-- Legend / control panel -->
@@ -2577,15 +2574,7 @@ if (fabStackBtn) {
     const fabStack = document.querySelector(".fab-stack");
     if (fabStack) fabStack.classList.toggle("collapsed", fabStackCollapsed);
     const topbar = document.getElementById("topbar");
-    if (topbar && !fabStackCollapsed) topbar.classList.remove("collapsed");
-  });
-}
-
-const btnTopbarClose = document.getElementById("btnTopbarClose");
-if (btnTopbarClose) {
-  btnTopbarClose.addEventListener("click", (e) => {
-    e.stopPropagation();
-    document.getElementById("topbar").classList.add("collapsed");
+    if (topbar) topbar.classList.toggle("collapsed", fabStackCollapsed);
   });
 }
 
