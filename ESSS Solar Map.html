@@ -1654,6 +1654,12 @@ let isLightTheme = false;
 let isSatellite = false;
 L.control.zoom({ position:"bottomleft" }).addTo(map);
 
+map.on("click", (e) => {
+  if (!simDashboardMinimized && typeof minimizeSim === "function") {
+    minimizeSim();
+  }
+});
+
 const HOME = { center:[SUN.lat, SUN.lng], zoom:12 };
 
 // ---------- orbit rings + planet markers ----------
@@ -2452,8 +2458,14 @@ function frameAll(){
   map.flyToBounds(b.pad(0.12), { duration:1.6 });
 }
 function resetView(){ 
-  map.flyTo(HOME.center, HOME.zoom, { duration:1.4 }); 
-  inset.flyTo(HOME.center, 7, { duration:1.4 });
+  const lat = (HOME && HOME.center && !isNaN(HOME.center[0])) ? HOME.center[0] : (SUN && !isNaN(SUN.lat) ? SUN.lat : 9.0408);
+  const lng = (HOME && HOME.center && !isNaN(HOME.center[1])) ? HOME.center[1] : (SUN && !isNaN(SUN.lng) ? SUN.lng : 38.7627);
+  const zoom = (HOME && typeof HOME.zoom === 'number') ? HOME.zoom : 12;
+  
+  map.flyTo([lat, lng], zoom, { duration: 1.4 }); 
+  if (inset && typeof inset.flyTo === 'function') {
+    inset.flyTo([lat, lng], 7, { duration: 1.4 });
+  }
 }
 
 document.getElementById("fabReset").onclick = resetView;
@@ -3191,6 +3203,10 @@ function rebuildSystem(newLat, newLng, newSunDiameterMeters) {
   veil.classList.remove("gone");
   veil.querySelector(".l").textContent = t('recalculating');
   
+  if (typeof newLat !== 'number' || isNaN(newLat)) newLat = SUN.lat || 9.0408;
+  if (typeof newLng !== 'number' || isNaN(newLng)) newLng = SUN.lng || 38.7627;
+  if (typeof newSunDiameterMeters !== 'number' || isNaN(newSunDiameterMeters)) newSunDiameterMeters = getSelectedSunDiameter() || 1;
+
   SUN.lat = newLat;
   SUN.lng = newLng;
   
