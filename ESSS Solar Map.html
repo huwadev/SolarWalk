@@ -456,15 +456,15 @@
   #veil .o{width:60px;height:60px;border:2px solid rgba(120,170,255,.25);border-top-color:var(--gold);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* Position Leaflet zoom controls inline at bottom baseline (bottom: 24px) */
+  /* Position Leaflet zoom controls hugging left corner (left: 14px) right above simulation controls */
   .leaflet-bottom.leaflet-left {
-    bottom: 24px !important;
-    left: 444px !important;
-    transition: bottom 0.25s ease, left 0.25s ease;
+    bottom: 120px !important;
+    left: 14px !important;
+    transition: bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
   body.sim-minimized .leaflet-bottom.leaflet-left {
-    bottom: 24px !important;
-    left: 62px !important;
+    bottom: 74px !important;
+    left: 14px !important;
   }
 
   /* Right Floating Actions Stack Collapse */
@@ -481,7 +481,8 @@
 
   @media (max-width:1024px){
     #inset{display:none;}
-    .leaflet-bottom.leaflet-left { bottom: 24px !important; left: 62px !important; }
+    .leaflet-bottom.leaflet-left { bottom: 120px !important; left: 14px !important; }
+    body.sim-minimized .leaflet-bottom.leaflet-left { bottom: 74px !important; left: 14px !important; }
     #topbar{top:auto;bottom:84px;flex-wrap:wrap;justify-content:center;gap:8px;padding:8px 12px;}
     #topbar.collapsed, #topbar.hidden { transform: translate(-50%, 12px) scale(0.95); }
     #topbar .meta .s{display:none;}
