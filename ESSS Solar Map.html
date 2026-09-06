@@ -45,6 +45,11 @@
   }
   #map{position:absolute;inset:0;background:#05070f;z-index:0;}
 
+  /* Space-dark mode basemap tiles */
+  .dark-map-tiles .leaflet-tile {
+    filter: invert(100%) hue-rotate(185deg) brightness(85%) contrast(110%) saturate(60%);
+  }
+
   /* Starfield over the dark map for extra "space" depth */
   #map::after{
     content:"";position:absolute;inset:0;pointer-events:none;z-index:400;
@@ -466,17 +471,39 @@
   .ar-planet {
     position:absolute; pointer-events:auto; cursor:pointer;
     transform:translate(-50%,-50%);
-    transition: width 0.2s, height 0.2s;
+    transition: width 0.15s ease-out, height 0.15s ease-out;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
-  .ar-planet-dot {
-    width:100%; height:100%; border-radius:50%;
-    box-shadow: 0 0 12px 3px var(--glow-color, rgba(255,255,255,0.4));
+  .ar-model-container {
+    position:relative; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ar-model-viewer {
+    width:100%; height:100%; display:block;
+    background:transparent;
+    filter: drop-shadow(0 0 16px var(--glow-color, rgba(255,255,255,0.4)));
+    pointer-events:none;
+  }
+  /* Sun coronal halo in AR */
+  .ar-planet[data-planet="sun"] .ar-model-viewer {
+    filter: drop-shadow(0 0 35px rgba(255,206,77,0.85)) drop-shadow(0 0 75px rgba(255,157,46,0.5));
+  }
+  /* Saturn ring aspect boost */
+  .ar-planet[data-planet="saturn"] .ar-model-viewer {
+    transform: scale(1.15);
+  }
+  .ar-planet-fallback {
+    position:absolute; inset:8%; border-radius:50%;
+    box-shadow: 0 0 14px 4px var(--glow-color, rgba(255,255,255,0.4));
+    transition: opacity 0.3s;
+    pointer-events:none;
+    display:none;
   }
   .ar-planet-label {
     position:absolute; top:calc(100% + 6px); left:50%;
     transform:translateX(-50%); white-space:nowrap; text-align:center;
     font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600;
-    color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.8);
+    color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.9);
     pointer-events:none; line-height:1.3;
   }
   .ar-planet-label .ar-dist { font-size:9.5px; color:#aab4e0; font-weight:400; }
@@ -484,12 +511,18 @@
   .ar-actual-dot {
     position:absolute; top:50%; left:50%;
     transform:translate(-50%,-50%);
-    border-radius:50%; border:1px solid rgba(255,255,255,0.5);
+    border-radius:50%; border:1px dashed rgba(255,255,255,0.6);
     pointer-events:none; z-index:2;
   }
-  /* Sun special glow in AR */
-  .ar-planet[data-planet="sun"] .ar-planet-dot {
-    box-shadow: 0 0 30px 10px rgba(255,206,77,0.6), 0 0 60px 20px rgba(255,157,46,0.3);
+  /* True scale targeting reticle for miniature bodies */
+  .ar-reticle {
+    position:absolute; inset:-8px; border:1px dashed rgba(167,139,250,0.6);
+    border-radius:50%; pointer-events:none;
+    animation: ar-reticle-pulse 2s ease-in-out infinite;
+  }
+  @keyframes ar-reticle-pulse {
+    0%,100%{transform:scale(1); opacity:0.6}
+    50%{transform:scale(1.15); opacity:0.9}
   }
 
   /* AR HUD */
@@ -1832,18 +1865,55 @@ function j2000OrbitPoints(p, nPoints) {
   return pts;
 }
 
-// ---------- map ----------
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+// ---------- map tile configuration ----------
+// Note: As of August 2026, CARTO requires an API key for raster basemaps (carto.com/basemaps/apikey).
+// To prevent watermarks out-of-the-box, we use OpenStreetMap styled with a space-dark CSS filter by default.
+// If a CARTO_API_KEY is provided (via localStorage or set below), authenticated CARTO endpoints are used instead.
+const CARTO_API_KEY = (typeof localStorage !== "undefined" && localStorage.getItem("carto_api_key")) || "";
+
+const OSM_TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+const DARK_TILES = CARTO_API_KEY 
+  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`
+  : OSM_TILES;
+const LIGHT_TILES = CARTO_API_KEY
+  ? `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`
+  : OSM_TILES;
 const SATELLITE_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const SATELLITE_LABELS_TILES = CARTO_API_KEY
+  ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png?key=${CARTO_API_KEY}`
+  : "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
+
+const TILE_ATTR = CARTO_API_KEY
+  ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  : OSM_ATTR;
 const SAT_ATTR = 'Tiles &copy; Esri &mdash; Source: Esri & partners';
+
+// Developer helper to configure or clear Carto API key from browser console:
+window.setCartoApiKey = function(key) {
+  if (key) {
+    localStorage.setItem("carto_api_key", key.trim());
+    console.log("CARTO API key saved. Reloading map...");
+  } else {
+    localStorage.removeItem("carto_api_key");
+    console.log("CARTO API key removed. Using keyless OpenStreetMap tiles. Reloading map...");
+  }
+  location.reload();
+};
 
 const map = L.map("map", {
   center:[SUN.lat, SUN.lng], zoom:12, minZoom:6, maxZoom:24,
   zoomControl:false, attributionControl:true,
 });
-let currentTileLayer = L.tileLayer(DARK_TILES, { attribution:TILE_ATTR, subdomains:"abcd", maxZoom:24, maxNativeZoom:19, zIndex: 1 }).addTo(map);
+let currentTileLayer = L.tileLayer(DARK_TILES, { 
+  attribution: TILE_ATTR, 
+  subdomains: CARTO_API_KEY ? "abcd" : "abc", 
+  className: CARTO_API_KEY ? "" : "dark-map-tiles",
+  maxZoom: 24, 
+  maxNativeZoom: 19, 
+  zIndex: 1 
+}).addTo(map);
 let currentLabelsLayer = null;
 let isLightTheme = false;
 let isSatellite = false;
@@ -2750,7 +2820,10 @@ const inset = L.map("insetmap", {
   dragging:true, scrollWheelZoom:true, doubleClickZoom:true, boxZoom:true,
   touchZoom:true, keyboard:true,
 });
-let insetTileLayer = L.tileLayer(DARK_TILES, { subdomains:"abcd" }).addTo(inset);
+let insetTileLayer = L.tileLayer(DARK_TILES, { 
+  subdomains: CARTO_API_KEY ? "abcd" : "abc",
+  className: CARTO_API_KEY ? "" : "dark-map-tiles"
+}).addTo(inset);
 const neptuneData = PLANETS.find(p=>p.key==="neptune");
 
 let insetSunCircle, insetSunMarker, viewportRect;
@@ -3344,6 +3417,8 @@ function updateMapLayer() {
   let url = DARK_TILES;
   let attr = TILE_ATTR;
   let nativeZoom = 19;
+  let subdomains = CARTO_API_KEY ? "abcd" : "abc";
+  let tileClass = (!CARTO_API_KEY && !isLightTheme && !isSatellite) ? "dark-map-tiles" : "";
   
   document.body.classList.toggle("satellite-view", isSatellite);
   
@@ -3351,26 +3426,30 @@ function updateMapLayer() {
     url = SATELLITE_TILES;
     attr = SAT_ATTR;
     nativeZoom = 18;
+    subdomains = "";
+    tileClass = "";
   } else if (isLightTheme) {
-    url = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-    attr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+    url = LIGHT_TILES;
+    attr = CARTO_API_KEY ? TILE_ATTR : OSM_ATTR;
     nativeZoom = 19;
+    tileClass = "";
   }
   
   const finalAttr = `${attr} · ${t('mapAttribution')}`;
   
   currentTileLayer = L.tileLayer(url, {
     attribution: finalAttr,
-    subdomains: isSatellite ? "" : (isLightTheme ? "abc" : "abcd"),
+    subdomains: subdomains,
+    className: tileClass,
     maxZoom: 24,
     maxNativeZoom: nativeZoom,
     zIndex: 1
   }).addTo(map);
   
   if (isSatellite) {
-    currentLabelsLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", {
+    currentLabelsLayer = L.tileLayer(SATELLITE_LABELS_TILES, {
       attribution: "",
-      subdomains: "abcd",
+      subdomains: CARTO_API_KEY ? "abcd" : "",
       maxZoom: 24,
       maxNativeZoom: 19,
       zIndex: 2
@@ -3382,7 +3461,11 @@ function updateMapLayer() {
     inset.removeLayer(insetTileLayer);
     // Use theme-synchronized Vector tiles for high contrast and reliability
     let insetUrl = isLightTheme ? LIGHT_TILES : DARK_TILES;
-    insetTileLayer = L.tileLayer(insetUrl, { subdomains: "abcd" }).addTo(inset);
+    let insetClass = (!CARTO_API_KEY && !isLightTheme) ? "dark-map-tiles" : "";
+    insetTileLayer = L.tileLayer(insetUrl, { 
+      subdomains: CARTO_API_KEY ? "abcd" : "abc",
+      className: insetClass
+    }).addTo(inset);
   }
 
   if (viewportRect) {
@@ -4091,6 +4174,57 @@ function getFormatActualSize(diameterKm) {
   return `${scaledM.toFixed(2)} m`;
 }
 
+function computeAR3DSize(b, distKm, isBrought, scaleMode, ppd) {
+  const scaledDiamM = b.diameter * 1000 * SCALE;
+  const distM = Math.max(distKm * 1000, 1);
+  
+  // Real physical angular size in screen pixels
+  const angularSizeDeg = 2 * Math.atan2(scaledDiamM / 2, distM) * (180 / Math.PI);
+  const truePixelSize = angularSizeDeg * ppd;
+
+  if (scaleMode === "true-scale") {
+    const isSubPixel = truePixelSize < 8;
+    return {
+      sizePx: Math.max(Math.round(truePixelSize), 8),
+      truePixelSize: truePixelSize,
+      isSubPixel: isSubPixel,
+      actualDotSize: Math.max(Math.round(truePixelSize), 2)
+    };
+  }
+
+  // Enhanced Mode:
+  // Proportional astronomical scale curve based on true planetary diameters:
+  // Sun: 195px | Saturn: 145px (with rings) | Jupiter: 135px | Uranus/Neptune: ~90px | Earth: 72px | Venus: 68px | Mars: 58px | Mercury: 52px | Pluto: 46px
+  let baseSize;
+  if (b.isSun) {
+    baseSize = 195;
+  } else if (b.key === "saturn") {
+    baseSize = 145; // rings span 2.3x ball diameter
+  } else if (b.key === "jupiter") {
+    baseSize = 135;
+  } else {
+    const rel = Math.pow(b.diameter / 142984, 0.45);
+    baseSize = Math.round(44 + rel * 86);
+  }
+
+  // Proximity expansion: as user walks closer to the body (< 60m) or summons it via Bring-to-Me
+  let proximityFactor = 1.0;
+  if (isBrought) {
+    proximityFactor = 1.9; // Large close-up 3D floating object (~260px)
+  } else if (distM < 60) {
+    proximityFactor = 1.0 + Math.min((60 - distM) / 60, 1.0) * 0.75;
+  }
+
+  const finalSize = Math.min(Math.round(baseSize * proximityFactor), 280);
+
+  return {
+    sizePx: finalSize,
+    truePixelSize: truePixelSize,
+    isSubPixel: truePixelSize < (finalSize - 6),
+    actualDotSize: Math.max(Math.round(truePixelSize), 2)
+  };
+}
+
 function createARPlanetElements() {
   const canvas = document.getElementById("ar-canvas");
   if (!canvas) return;
@@ -4113,15 +4247,58 @@ function createARPlanetElements() {
     el.className = "ar-planet";
     el.setAttribute("data-planet", b.key);
     el.style.display = "none";
+
+    const isSun = b.isSun;
+    const modelFile = isSun ? "Planet model/sun.glb" : `Planet model/${b.key}.glb`;
+    const isSaturn = (b.key === "saturn");
+    const isEarth = (b.key === "earth");
+    const isUranus = (b.key === "uranus");
+
+    let orientationAttr = "";
+    if (isSaturn) orientationAttr = 'orientation="26.73deg 0 0"';
+    else if (isEarth) orientationAttr = 'orientation="23.44deg 0 0"';
+    else if (isUranus) orientationAttr = 'orientation="97.77deg 0 0"';
+
     el.innerHTML = `
-      <div class="ar-planet-dot" style="background: ${b.color}; --glow-color: ${b.glow};"></div>
+      <div class="ar-model-container">
+        <model-viewer
+          class="ar-model-viewer"
+          src="${modelFile}"
+          alt="3D ${b.name}"
+          auto-rotate
+          rotation-per-second="${isSun ? '12deg' : '22deg'}"
+          interaction-prompt="none"
+          disable-zoom
+          disable-pan
+          shadow-intensity="${isSun ? 0 : 0.85}"
+          environment-image="neutral"
+          camera-orbit="0deg 75deg 105%"
+          ${orientationAttr}
+          style="width:100%; height:100%; background:transparent; display:block; pointer-events:none;">
+        </model-viewer>
+        <div class="ar-planet-fallback" style="background: ${b.color}; --glow-color: ${b.glow};"></div>
+      </div>
       <div class="ar-actual-dot"></div>
+      <div class="ar-reticle ar-hidden"></div>
       <div class="ar-planet-label">
         <div class="ar-name">${b.name}</div>
         <div class="ar-dist">--</div>
         <div class="ar-actual">${t('arActualSize')}: ${getFormatActualSize(b.diameter)}</div>
       </div>
     `;
+
+    // Smooth fallback handling: when 3D model loads, hide fallback
+    const mv = el.querySelector("model-viewer");
+    const fb = el.querySelector(".ar-planet-fallback");
+    if (mv && fb) {
+      mv.addEventListener("load", () => {
+        fb.style.display = "none";
+      });
+      mv.addEventListener("error", () => {
+        fb.style.display = "block";
+      });
+    }
+
     el.addEventListener("click", (ev) => {
       ev.stopPropagation();
       openARInspect(b.key);
@@ -4147,7 +4324,12 @@ function openARInspect(key) {
 
   const modelFile = isSun ? "Planet model/sun.glb" : `Planet model/${key}.glb`;
   const isSaturn = (key === "saturn");
-  const orientationAttr = isSaturn ? 'orientation="26.73deg 0 0"' : '';
+  const isEarth = (key === "earth");
+  const isUranus = (key === "uranus");
+  let orientationAttr = '';
+  if (isSaturn) orientationAttr = 'orientation="26.73deg 0 0"';
+  else if (isEarth) orientationAttr = 'orientation="23.44deg 0 0"';
+  else if (isUranus) orientationAttr = 'orientation="97.77deg 0 0"';
 
   wrap.innerHTML = `
     <model-viewer
@@ -4316,8 +4498,8 @@ function renderARFrame() {
     let vertOffset = vertAngle * (ch / 60) + arPitchOffset;
 
     // Check FOV visibility (allow margin for smooth entry)
-    if (Math.abs(angleDiff) < (hFOV / 2 + 15) && vertOffset > -ch / 2 - 100 && vertOffset < ch / 2 + 100) {
-      el.style.display = "block";
+    if (Math.abs(angleDiff) < (hFOV / 2 + 20) && vertOffset > -ch / 2 - 120 && vertOffset < ch / 2 + 120) {
+      el.style.display = "flex";
 
       const screenX = cw / 2 + angleDiff * ppd;
       const screenY = ch / 2 + vertOffset;
@@ -4325,35 +4507,31 @@ function renderARFrame() {
       el.style.left = `${screenX}px`;
       el.style.top = `${screenY}px`;
 
-      // Scale sizing
-      const scaledDiamM = b.diameter * 1000 * SCALE;
-      const distM = Math.max(distKm * 1000, 1);
-      const angularSizeDeg = 2 * Math.atan2(scaledDiamM / 2, distM) * (180 / Math.PI);
-      const truePixelSize = Math.max(angularSizeDeg * ppd, 2);
+      // 3D Sizing calculation
+      const sizeInfo = computeAR3DSize(b, distKm, isBrought, arScaleMode, ppd);
 
-      let visualSizePx;
-      if (arScaleMode === "true-scale") {
-        visualSizePx = Math.max(truePixelSize, 3);
-      } else {
-        // Enhanced Mode: min 44px, scaling up as user gets very close
-        const baseSize = b.isSun ? 80 : 44;
-        const proximityBoost = Math.min(Math.max((50 / distM) * 30, 0), 120);
-        visualSizePx = Math.min(baseSize + proximityBoost, 200);
-      }
+      el.style.width = `${sizeInfo.sizePx}px`;
+      el.style.height = `${sizeInfo.sizePx}px`;
 
-      el.style.width = `${visualSizePx}px`;
-      el.style.height = `${visualSizePx}px`;
-
-      // Actual size reference dot
+      // Actual size reference dot (Enhanced mode)
       const actualDot = el.querySelector(".ar-actual-dot");
       if (actualDot) {
-        if (arScaleMode === "enhanced" && truePixelSize < (visualSizePx - 4)) {
-          const adSize = Math.max(Math.round(truePixelSize), 2);
-          actualDot.style.width = `${adSize}px`;
-          actualDot.style.height = `${adSize}px`;
+        if (arScaleMode === "enhanced" && sizeInfo.isSubPixel) {
+          actualDot.style.width = `${sizeInfo.actualDotSize}px`;
+          actualDot.style.height = `${sizeInfo.actualDotSize}px`;
           actualDot.style.display = "block";
         } else {
           actualDot.style.display = "none";
+        }
+      }
+
+      // Reticle targeting indicator (True scale sub-pixel mode)
+      const reticle = el.querySelector(".ar-reticle");
+      if (reticle) {
+        if (arScaleMode === "true-scale" && sizeInfo.isSubPixel) {
+          reticle.classList.remove("ar-hidden");
+        } else {
+          reticle.classList.add("ar-hidden");
         }
       }
 
