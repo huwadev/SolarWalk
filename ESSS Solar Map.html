@@ -449,6 +449,140 @@
     border-color: var(--stroke-strong);
   }
 
+  /* ---------- AR Camera Overlay ---------- */
+  .ar-hidden { display:none !important; }
+  #ar-overlay {
+    position:fixed; inset:0; z-index:5000; background:#000;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  #arCamera {
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:0; background:#000;
+  }
+  #ar-canvas {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    overflow:hidden;
+  }
+  .ar-planet {
+    position:absolute; pointer-events:auto; cursor:pointer;
+    transform:translate(-50%,-50%);
+    transition: width 0.2s, height 0.2s;
+  }
+  .ar-planet-dot {
+    width:100%; height:100%; border-radius:50%;
+    box-shadow: 0 0 12px 3px var(--glow-color, rgba(255,255,255,0.4));
+  }
+  .ar-planet-label {
+    position:absolute; top:calc(100% + 6px); left:50%;
+    transform:translateX(-50%); white-space:nowrap; text-align:center;
+    font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600;
+    color:#fff; text-shadow:0 1px 4px rgba(0,0,0,0.8);
+    pointer-events:none; line-height:1.3;
+  }
+  .ar-planet-label .ar-dist { font-size:9.5px; color:#aab4e0; font-weight:400; }
+  .ar-planet-label .ar-actual { font-size:8.5px; color:#8b97c4; font-style:italic; }
+  .ar-actual-dot {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    border-radius:50%; border:1px solid rgba(255,255,255,0.5);
+    pointer-events:none; z-index:2;
+  }
+  /* Sun special glow in AR */
+  .ar-planet[data-planet="sun"] .ar-planet-dot {
+    box-shadow: 0 0 30px 10px rgba(255,206,77,0.6), 0 0 60px 20px rgba(255,157,46,0.3);
+  }
+
+  /* AR HUD */
+  #ar-hud {
+    position:absolute; bottom:0; left:0; right:0; z-index:10;
+    display:flex; align-items:center; gap:8px;
+    padding:12px 16px; padding-bottom:max(12px, env(safe-area-inset-bottom));
+    background:linear-gradient(transparent, rgba(0,0,0,0.85));
+    font-family:"Space Grotesk",sans-serif;
+  }
+  .ar-btn {
+    padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.2);
+    background:rgba(11,16,34,0.75); backdrop-filter:blur(10px);
+    color:#e8edff; font-family:inherit; font-size:12px; font-weight:600;
+    cursor:pointer; white-space:nowrap; transition:.16s;
+  }
+  .ar-btn:hover { border-color:rgba(255,255,255,0.4); }
+  .ar-heading {
+    font-family:"Orbitron",sans-serif; font-size:13px; font-weight:700;
+    color:var(--gold); letter-spacing:1px;
+  }
+  .ar-nearest {
+    flex:1; font-size:11px; color:#aab4e0; text-align:center;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .ar-scale-btn { border-color:rgba(167,139,250,0.4); color:#c4b5fd; }
+  .ar-scale-btn.true-scale { border-color:rgba(52,211,153,0.4); color:#6ee7b7; }
+  .ar-bring-btn {
+    border-color:rgba(255,206,77,0.4); color:var(--gold);
+    animation: ar-pulse 2s ease-in-out infinite;
+  }
+  @keyframes ar-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,206,77,0.3)} 50%{box-shadow:0 0 12px 4px rgba(255,206,77,0.2)} }
+
+  /* AR Onboarding overlay */
+  #ar-onboarding {
+    position:absolute; inset:0; z-index:5; display:flex;
+    flex-direction:column; align-items:center; justify-content:center;
+    color:#c4b5fd; text-align:center; gap:16px;
+    background:rgba(0,0,0,0.4); pointer-events:none;
+    transition:opacity 0.5s; font-size:14px;
+  }
+  #ar-onboarding.faded { opacity:0; }
+
+  /* AR Inspect Modal */
+  #ar-inspect {
+    position:absolute; inset:0; z-index:20;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #ar-inspect-bg {
+    position:absolute; inset:0; background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(8px);
+  }
+  #ar-inspect-card {
+    position:relative; z-index:1; width:90%; max-width:420px;
+    max-height:85vh; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--stroke);
+    border-radius:16px; box-shadow:0 24px 60px rgba(0,0,0,0.6);
+    padding:16px;
+  }
+  .ar-inspect-close {
+    position:absolute; top:10px; right:10px; z-index:2;
+    width:32px; height:32px; border-radius:50%; border:1px solid var(--stroke);
+    background:var(--panel); color:var(--text); font-size:16px;
+    cursor:pointer; display:grid; place-items:center;
+  }
+  #arInspectModelWrap {
+    width:100%; height:220px; border-radius:12px; overflow:hidden;
+    background:radial-gradient(circle,#0c1430,#04060f); margin-bottom:12px;
+  }
+  #arInspectModelWrap model-viewer {
+    width:100%; height:100%; display:block;
+  }
+  #arInspectInfo { font-size:13px; color:var(--text); line-height:1.5; }
+  .ar-scale-ruler {
+    display:flex; align-items:center; gap:10px; margin-top:10px;
+    padding:10px; border-radius:10px;
+    background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.2);
+  }
+  .ar-scale-ruler-dot {
+    flex:none; border-radius:50%; border:1px dashed rgba(255,255,255,0.4);
+  }
+  .ar-scale-ruler-text { font-size:11.5px; color:#c4b5fd; }
+
+  /* PC drag hint */
+  #arPcHint {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    z-index:6; padding:12px 24px; border-radius:12px;
+    background:rgba(11,16,34,0.8); border:1px solid var(--stroke);
+    color:#c4b5fd; font-size:13px; font-weight:600;
+    animation: ar-fade-out 3s ease-in forwards; animation-delay:2s;
+  }
+  @keyframes ar-fade-out { to{opacity:0;pointer-events:none} }
+
   /* loading veil */
   #veil{position:absolute;inset:0;z-index:3000;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#0c1430,#04060f);transition:opacity .6s ease, visibility .6s;}
   #veil.gone{opacity:0;pointer-events:none;visibility:hidden;display:none !important;}
@@ -964,6 +1098,34 @@
   </div>
 </div>
 
+<!-- AR Camera Overlay -->
+<div id="ar-overlay" class="ar-hidden">
+  <video id="arCamera" autoplay playsinline muted></video>
+  <div id="ar-canvas"></div>
+  <div id="ar-onboarding">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="3"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5" fill="#a78bfa"/></svg>
+    <p id="arOnboardText" data-i18n="arPointCamera">Point your camera to explore the solar system</p>
+  </div>
+  <div id="ar-hud">
+    <button id="arBack" class="ar-btn" data-i18n="arBackToMap">← Map</button>
+    <span id="arHeadingDisplay" class="ar-heading">N 0°</span>
+    <span id="arNearestDisplay" class="ar-nearest">--</span>
+    <button id="arScaleToggle" class="ar-btn ar-scale-btn" data-i18n="arEnhanced">🔍 Enhanced</button>
+    <button id="arBringBtn" class="ar-btn ar-bring-btn ar-hidden" data-i18n="arBringToMe">📦 Bring to Me</button>
+  </div>
+  <!-- AR Inspect / Focus Modal -->
+  <div id="ar-inspect" class="ar-hidden">
+    <div id="ar-inspect-bg"></div>
+    <div id="ar-inspect-card">
+      <button id="arInspectClose" class="ar-inspect-close">✕</button>
+      <div id="arInspectModelWrap"></div>
+      <div id="arInspectInfo"></div>
+    </div>
+  </div>
+  <!-- PC Drag Hint -->
+  <div id="arPcHint" class="ar-hidden" data-i18n="arDragToLook">Click and drag to look around</div>
+</div>
+
 <!-- Legend / control panel -->
 <aside id="legend">
   <div class="hd" id="legendHd" title="Collapse Panel">
@@ -1006,6 +1168,10 @@
   <button class="fab" id="fabUserLocation" title="Toggle Live Location Tracking">
     <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="3" fill="#007aff"/><circle cx="12" cy="12" r="8"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
     <span id="userLocationText" data-i18n="liveLocation">My Location</span>
+  </button>
+  <button class="fab" id="fabAR" title="AR Camera View">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" width="18" height="18"><rect x="2" y="4" width="20" height="16" rx="3"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.5" fill="#a78bfa"/><path d="M2 8h3M19 8h3"/></svg>
+    <span data-i18n="arView">AR View</span>
   </button>
   <button class="fab" id="fabMapToggle" title="Toggle Satellite View">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" id="mapIcon"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
@@ -3813,6 +3979,526 @@ if (urlParams.get('test') === 'true') {
       }, 3000);
     }, 500);
   }, 500);
+}
+// ============================================================================
+// ---------- AR Camera Mode ----------
+// ============================================================================
+let arActive = false;
+let arStream = null;
+let arAnimFrameId = null;
+let arCompassHeading = 0; // 0=N, 90=E, 180=S, 270=W
+let arPitch = 80; // degrees vertical (80 ≈ standard upright phone tilt)
+let arScaleMode = 'enhanced'; // 'enhanced' or 'true-scale'
+let broughtPlanetKey = null; // key of planet temporarily summoned
+let arEligibleOrbitPlanet = null; // planet whose orbit the user is currently near
+let isOrientationSupported = false;
+let arMouseDragging = false;
+let arMouseStartX = 0;
+let arMouseStartY = 0;
+let arHeadingOffset = 0;
+let arPitchOffset = 0;
+const arPlanetElements = {};
+
+function getBearing(lat1, lon1, lat2, lon2) {
+  const toRad = (a) => (a * Math.PI) / 180;
+  const toDeg = (r) => (r * 180) / Math.PI;
+  const y = Math.sin(toRad(lon2 - lon1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+            Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) * Math.cos(toRad(lon2 - lon1));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function handleOrientation(e) {
+  if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+    arCompassHeading = (e.webkitCompassHeading + arHeadingOffset) % 360;
+    isOrientationSupported = true;
+  } else if (e.alpha !== null && e.alpha !== undefined) {
+    arCompassHeading = ((360 - e.alpha) + arHeadingOffset + 360) % 360;
+    isOrientationSupported = true;
+  }
+  if (e.beta !== null && e.beta !== undefined) {
+    arPitch = e.beta;
+  }
+}
+
+async function requestOrientationPermission() {
+  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+    try {
+      const resp = await DeviceOrientationEvent.requestPermission();
+      if (resp === "granted") {
+        window.addEventListener("deviceorientation", handleOrientation, true);
+        isOrientationSupported = true;
+      }
+    } catch (err) {
+      console.warn("DeviceOrientation permission denied or unavailable:", err);
+    }
+  } else if (typeof window.addEventListener === "function") {
+    window.addEventListener("deviceorientation", handleOrientation, true);
+    setTimeout(() => {
+      if (!isOrientationSupported) {
+        const hint = document.getElementById("arPcHint");
+        if (hint) hint.classList.remove("ar-hidden");
+      }
+    }, 1500);
+  }
+}
+
+async function startARCamera() {
+  const video = document.getElementById("arCamera");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert(t('arNoCamera'));
+    return false;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+    arStream = stream;
+    return true;
+  } catch (err) {
+    console.warn("Could not get environment camera, trying fallback:", err);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      video.srcObject = stream;
+      await video.play();
+      arStream = stream;
+      return true;
+    } catch (e2) {
+      console.error("Camera access error:", e2);
+      alert(t('arNoCamera'));
+      return false;
+    }
+  }
+}
+
+function stopARCamera() {
+  if (arStream) {
+    arStream.getTracks().forEach(track => track.stop());
+    arStream = null;
+  }
+  const video = document.getElementById("arCamera");
+  if (video) video.srcObject = null;
+}
+
+function getFormatActualSize(diameterKm) {
+  const scaledM = diameterKm * 1000 * SCALE;
+  const mm = scaledM * 1000;
+  if (mm < 10) return `${mm.toFixed(1)} mm`;
+  if (mm < 1000) return `${(mm / 10).toFixed(1)} cm`;
+  return `${scaledM.toFixed(2)} m`;
+}
+
+function createARPlanetElements() {
+  const canvas = document.getElementById("ar-canvas");
+  if (!canvas) return;
+  canvas.innerHTML = "";
+
+  const bodies = [
+    { key: "sun", isSun: true, name: t('theSun'), color: "#ffe44d", glow: "#ffcd3a", diameter: 1392000 },
+    ...PLANETS.map(p => ({
+      key: p.key,
+      isSun: false,
+      name: t('planet_' + p.key),
+      color: p.color,
+      glow: p.glow,
+      diameter: p.diameter
+    }))
+  ];
+
+  bodies.forEach(b => {
+    const el = document.createElement("div");
+    el.className = "ar-planet";
+    el.setAttribute("data-planet", b.key);
+    el.style.display = "none";
+    el.innerHTML = `
+      <div class="ar-planet-dot" style="background: ${b.color}; --glow-color: ${b.glow};"></div>
+      <div class="ar-actual-dot"></div>
+      <div class="ar-planet-label">
+        <div class="ar-name">${b.name}</div>
+        <div class="ar-dist">--</div>
+        <div class="ar-actual">${t('arActualSize')}: ${getFormatActualSize(b.diameter)}</div>
+      </div>
+    `;
+    el.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      openARInspect(b.key);
+    });
+    canvas.appendChild(el);
+    arPlanetElements[b.key] = el;
+  });
+}
+
+function openARInspect(key) {
+  const modal = document.getElementById("ar-inspect");
+  const wrap = document.getElementById("arInspectModelWrap");
+  const info = document.getElementById("arInspectInfo");
+  if (!modal || !wrap || !info) return;
+
+  const isSun = (key === "sun");
+  const planet = isSun ? null : PLANETS.find(p => p.key === key);
+  const displayName = isSun ? t('theSun') : t('planet_' + key);
+  const diameter = isSun ? 1392000 : (planet ? planet.diameter : 0);
+  const scaledM = diameter * 1000 * SCALE;
+  const comp = getComparableObject(scaledM);
+  const actualStr = getFormatActualSize(diameter);
+
+  const modelFile = isSun ? "Planet model/sun.glb" : `Planet model/${key}.glb`;
+  const isSaturn = (key === "saturn");
+  const orientationAttr = isSaturn ? 'orientation="26.73deg 0 0"' : '';
+
+  wrap.innerHTML = `
+    <model-viewer
+      src="${modelFile}"
+      alt="3D ${displayName}"
+      auto-rotate
+      camera-controls
+      rotation-per-second="25deg"
+      interaction-prompt="none"
+      shadow-intensity="${isSun ? 0 : 1}"
+      environment-image="neutral"
+      ${orientationAttr}
+      style="width:100%; height:100%; background:transparent;">
+      <div class="pp-2d-fallback" style="display:none; width:100%; height:100%; justify-content:center; align-items:center;">
+        <div style="width:80px; height:80px; border-radius:50%; background:${isSun ? '#ffce4d' : planet.color}; box-shadow:0 0 24px ${isSun ? '#ff9d2e' : planet.glow};"></div>
+      </div>
+    </model-viewer>
+  `;
+
+  const dotSizePx = Math.min(Math.max(Math.round(scaledM * 50), 3), 40);
+
+  let detailsHtml = "";
+  if (isSun) {
+    detailsHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h2 style="margin:0; font-size:18px; color:var(--gold); font-family:'Orbitron',sans-serif;">${displayName}</h2>
+        <span style="font-size:11px; color:var(--muted);">${t('theSunAm')}</span>
+      </div>
+      <p style="font-size:12px; color:#cfd8ff; margin:6px 0;">${t('fact_sun')}</p>
+      <div class="ar-scale-ruler">
+        <div class="ar-scale-ruler-dot" style="width:${dotSizePx}px; height:${dotSizePx}px; background:#ffce4d;"></div>
+        <div class="ar-scale-ruler-text">
+          <b>${t('arActualSize')}: ${actualStr}</b><br>
+          ${t('atThisScale')} ${t('theSun')} ${t('isSizeOf')} <b>${comp}</b>
+        </div>
+      </div>
+    `;
+  } else if (planet) {
+    const subName = t('planet_' + key + '_sub');
+    detailsHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <h2 style="margin:0; font-size:18px; color:var(--text); font-family:'Orbitron',sans-serif;">${displayName}</h2>
+        <span style="font-size:11px; color:var(--muted);">${subName}</span>
+      </div>
+      <div class="pp-grid" style="margin-bottom:8px;">
+        <div class="pp-cell"><div class="l">${t('distFromSun')}</div><div class="v">${fmtKm(planet.realKm * 1e6)}<br><small>${planet.mapKm.toFixed(2)} km ${t('onMap')}</small></div></div>
+        <div class="pp-cell"><div class="l">${t('diameter')}</div><div class="v">${planet.diameter.toLocaleString()} km<br><small>${scaledDiameter(planet.diameter)} ${t('scaled')}</small></div></div>
+        <div class="pp-cell"><div class="l">${t('moonsLabel')}</div><div class="v">${planet.moons}</div></div>
+        <div class="pp-cell"><div class="l">${t('orbitalPeriod')}</div><div class="v">${t('period_' + planet.key)}</div></div>
+      </div>
+      <div class="pp-fact" style="margin-bottom:8px;">${t('fact_' + key)}</div>
+      <div class="ar-scale-ruler">
+        <div class="ar-scale-ruler-dot" style="width:${dotSizePx}px; height:${dotSizePx}px; background:${planet.color};"></div>
+        <div class="ar-scale-ruler-text">
+          <b>${t('arActualSize')}: ${actualStr}</b><br>
+          ${t('atThisScale')} ${displayName} ${t('isSizeOf')} <b>${comp}</b>
+        </div>
+      </div>
+    `;
+  }
+
+  info.innerHTML = detailsHtml;
+  modal.classList.remove("ar-hidden");
+}
+
+function closeARInspect() {
+  const modal = document.getElementById("ar-inspect");
+  if (modal) modal.classList.add("ar-hidden");
+  const wrap = document.getElementById("arInspectModelWrap");
+  if (wrap) wrap.innerHTML = "";
+}
+
+function renderARFrame() {
+  if (!arActive) return;
+
+  const canvas = document.getElementById("ar-canvas");
+  if (!canvas) return;
+
+  const cw = canvas.clientWidth || window.innerWidth;
+  const ch = canvas.clientHeight || window.innerHeight;
+  const hFOV = 65; // standard camera horizontal FOV degrees
+  const ppd = cw / hFOV; // pixels per degree
+
+  // User position: use live GPS if available, else configured Sun
+  const userPos = userCurrentLatLng || { lat: SUN.lat, lng: SUN.lng };
+  const distFromSunKm = distanceKm(userPos.lat, userPos.lng, SUN.lat, SUN.lng);
+
+  // Compass heading indicator
+  const headingDisplay = document.getElementById("arHeadingDisplay");
+  if (headingDisplay) {
+    const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    const cardIdx = Math.round(arCompassHeading / 45) % 8;
+    headingDisplay.innerText = `${cardinals[cardIdx]} ${Math.round(arCompassHeading)}°`;
+  }
+
+  // Check orbit proximity for "Bring to Me"
+  arEligibleOrbitPlanet = null;
+  let minOrbitDiffRatio = 999;
+  PLANETS.forEach(p => {
+    const orbitRatio = Math.abs(distFromSunKm - p.mapKm) / Math.max(p.mapKm, 0.001);
+    if (orbitRatio < 0.20 && orbitRatio < minOrbitDiffRatio) {
+      minOrbitDiffRatio = orbitRatio;
+      arEligibleOrbitPlanet = p;
+    }
+  });
+
+  const bringBtn = document.getElementById("arBringBtn");
+  if (bringBtn) {
+    if (broughtPlanetKey) {
+      bringBtn.classList.remove("ar-hidden");
+      bringBtn.innerText = `🔄 ${t('arRelease')} ${t('planet_' + broughtPlanetKey)}`;
+    } else if (arEligibleOrbitPlanet) {
+      bringBtn.classList.remove("ar-hidden");
+      bringBtn.innerText = `📦 ${t('arBringToMe')}: ${t('planet_' + arEligibleOrbitPlanet.key)}`;
+    } else {
+      bringBtn.classList.add("ar-hidden");
+    }
+  }
+
+  // Nearest object telemetry
+  let nearestBodyName = t('theSun');
+  let minBodyDistKm = distFromSunKm;
+
+  // Process all bodies
+  const bodies = [
+    { key: "sun", isSun: true, name: t('theSun'), lat: SUN.lat, lng: SUN.lng, diameter: 1392000, mapKm: 0 },
+    ...PLANETS.map(p => {
+      const mk = planetMarkers[p.key];
+      const pos = mk ? mk.getLatLng() : destination(SUN.lat, SUN.lng, p.mapKm, 0);
+      return {
+        key: p.key,
+        isSun: false,
+        name: t('planet_' + p.key),
+        lat: pos.lat,
+        lng: pos.lng,
+        diameter: p.diameter,
+        mapKm: p.mapKm
+      };
+    })
+  ];
+
+  bodies.forEach(b => {
+    const el = arPlanetElements[b.key];
+    if (!el) return;
+
+    let targetLat = b.lat;
+    let targetLng = b.lng;
+    let isBrought = (broughtPlanetKey === b.key);
+
+    let distKm = isBrought ? 0.003 : distanceKm(userPos.lat, userPos.lng, targetLat, targetLng);
+    if (!b.isSun && distKm < minBodyDistKm && !isBrought) {
+      minBodyDistKm = distKm;
+      nearestBodyName = b.name;
+    }
+
+    // Target bearing relative to user
+    let targetBearing = isBrought
+      ? arCompassHeading
+      : getBearing(userPos.lat, userPos.lng, targetLat, targetLng);
+
+    // Angular delta (-180 to +180)
+    let angleDiff = (targetBearing - arCompassHeading + 540) % 360 - 180;
+
+    // Vertical pitch delta (phones held at ~80° tilt)
+    let vertAngle = isBrought ? 0 : (80 - arPitch);
+    let vertOffset = vertAngle * (ch / 60) + arPitchOffset;
+
+    // Check FOV visibility (allow margin for smooth entry)
+    if (Math.abs(angleDiff) < (hFOV / 2 + 15) && vertOffset > -ch / 2 - 100 && vertOffset < ch / 2 + 100) {
+      el.style.display = "block";
+
+      const screenX = cw / 2 + angleDiff * ppd;
+      const screenY = ch / 2 + vertOffset;
+
+      el.style.left = `${screenX}px`;
+      el.style.top = `${screenY}px`;
+
+      // Scale sizing
+      const scaledDiamM = b.diameter * 1000 * SCALE;
+      const distM = Math.max(distKm * 1000, 1);
+      const angularSizeDeg = 2 * Math.atan2(scaledDiamM / 2, distM) * (180 / Math.PI);
+      const truePixelSize = Math.max(angularSizeDeg * ppd, 2);
+
+      let visualSizePx;
+      if (arScaleMode === "true-scale") {
+        visualSizePx = Math.max(truePixelSize, 3);
+      } else {
+        // Enhanced Mode: min 44px, scaling up as user gets very close
+        const baseSize = b.isSun ? 80 : 44;
+        const proximityBoost = Math.min(Math.max((50 / distM) * 30, 0), 120);
+        visualSizePx = Math.min(baseSize + proximityBoost, 200);
+      }
+
+      el.style.width = `${visualSizePx}px`;
+      el.style.height = `${visualSizePx}px`;
+
+      // Actual size reference dot
+      const actualDot = el.querySelector(".ar-actual-dot");
+      if (actualDot) {
+        if (arScaleMode === "enhanced" && truePixelSize < (visualSizePx - 4)) {
+          const adSize = Math.max(Math.round(truePixelSize), 2);
+          actualDot.style.width = `${adSize}px`;
+          actualDot.style.height = `${adSize}px`;
+          actualDot.style.display = "block";
+        } else {
+          actualDot.style.display = "none";
+        }
+      }
+
+      // Distance and actual labels
+      const distEl = el.querySelector(".ar-dist");
+      if (distEl) {
+        distEl.innerText = isBrought
+          ? `📦 ${t('arBringToMe')}`
+          : (distKm < 1 ? `${(distKm * 1000).toFixed(0)} m` : `${distKm.toFixed(2)} km`);
+      }
+    } else {
+      el.style.display = "none";
+    }
+  });
+
+  const nearestDisplay = document.getElementById("arNearestDisplay");
+  if (nearestDisplay) {
+    nearestDisplay.innerText = `${t('nearestObject')}: ${nearestBodyName} (${minBodyDistKm < 1 ? (minBodyDistKm * 1000).toFixed(0) + 'm' : minBodyDistKm.toFixed(1) + 'km'})`;
+  }
+
+  arAnimFrameId = requestAnimationFrame(renderARFrame);
+}
+
+async function enterARMode() {
+  const overlay = document.getElementById("ar-overlay");
+  if (!overlay) return;
+
+  const camSuccess = await startARCamera();
+  if (!camSuccess) return;
+
+  arActive = true;
+  overlay.classList.remove("ar-hidden");
+
+  await requestOrientationPermission();
+
+  if (userWatchId === null && typeof startUserLocationTracking === "function") {
+    startUserLocationTracking();
+  }
+
+  createARPlanetElements();
+
+  const onboard = document.getElementById("ar-onboarding");
+  if (onboard) {
+    onboard.classList.remove("faded");
+    setTimeout(() => { onboard.classList.add("faded"); }, 2800);
+  }
+
+  if (arAnimFrameId) cancelAnimationFrame(arAnimFrameId);
+  arAnimFrameId = requestAnimationFrame(renderARFrame);
+}
+
+function exitARMode() {
+  arActive = false;
+  if (arAnimFrameId) {
+    cancelAnimationFrame(arAnimFrameId);
+    arAnimFrameId = null;
+  }
+  stopARCamera();
+
+  const overlay = document.getElementById("ar-overlay");
+  if (overlay) overlay.classList.add("ar-hidden");
+
+  closeARInspect();
+  broughtPlanetKey = null;
+}
+
+// Attach AR UI event listeners
+const fabARBtn = document.getElementById("fabAR");
+if (fabARBtn) {
+  fabARBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    enterARMode();
+  });
+}
+
+const arBackBtn = document.getElementById("arBack");
+if (arBackBtn) {
+  arBackBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    exitARMode();
+  });
+}
+
+const arScaleBtn = document.getElementById("arScaleToggle");
+if (arScaleBtn) {
+  arScaleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (arScaleMode === "enhanced") {
+      arScaleMode = "true-scale";
+      arScaleBtn.classList.add("true-scale");
+      arScaleBtn.innerText = `📏 ${t('arTrueScale')}`;
+    } else {
+      arScaleMode = "enhanced";
+      arScaleBtn.classList.remove("true-scale");
+      arScaleBtn.innerText = `🔍 ${t('arEnhanced')}`;
+    }
+  });
+}
+
+const arBringBtn = document.getElementById("arBringBtn");
+if (arBringBtn) {
+  arBringBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (broughtPlanetKey) {
+      broughtPlanetKey = null;
+    } else if (arEligibleOrbitPlanet) {
+      broughtPlanetKey = arEligibleOrbitPlanet.key;
+    }
+  });
+}
+
+const arInspectCloseBtn = document.getElementById("arInspectClose");
+if (arInspectCloseBtn) {
+  arInspectCloseBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeARInspect();
+  });
+}
+
+const arInspectBg = document.getElementById("ar-inspect-bg");
+if (arInspectBg) {
+  arInspectBg.addEventListener("click", closeARInspect);
+}
+
+// PC Desktop Drag interaction to simulate orientation rotation
+const arCanvas = document.getElementById("ar-canvas");
+if (arCanvas) {
+  arCanvas.addEventListener("mousedown", (e) => {
+    arMouseDragging = true;
+    arMouseStartX = e.clientX;
+    arMouseStartY = e.clientY;
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!arActive || !arMouseDragging) return;
+    const dx = e.clientX - arMouseStartX;
+    const dy = e.clientY - arMouseStartY;
+    arMouseStartX = e.clientX;
+    arMouseStartY = e.clientY;
+    arHeadingOffset = (arHeadingOffset - dx * 0.25 + 360) % 360;
+    arCompassHeading = (arCompassHeading - dx * 0.25 + 360) % 360;
+    arPitchOffset = Math.max(Math.min(arPitchOffset + dy * 0.25, 200), -200);
+  });
+  window.addEventListener("mouseup", () => {
+    arMouseDragging = false;
+  });
 }
 </script>
 </body>
