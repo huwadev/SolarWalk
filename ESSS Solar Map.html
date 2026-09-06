@@ -4249,7 +4249,7 @@ function createARPlanetElements() {
     el.style.display = "none";
 
     const isSun = b.isSun;
-    const modelFile = isSun ? "Planet model/sun.glb" : `Planet model/${b.key}.glb`;
+    const modelFile = isSun ? "Planet model/sun.glb" : (b.key === "moon" ? "Planet model/Moon.glb" : `Planet model/${b.key}.glb`);
     const isSaturn = (b.key === "saturn");
     const isEarth = (b.key === "earth");
     const isUranus = (b.key === "uranus");
@@ -4322,7 +4322,7 @@ function openARInspect(key) {
   const comp = getComparableObject(scaledM);
   const actualStr = getFormatActualSize(diameter);
 
-  const modelFile = isSun ? "Planet model/sun.glb" : `Planet model/${key}.glb`;
+  const modelFile = isSun ? "Planet model/sun.glb" : (key === "moon" ? "Planet model/Moon.glb" : `Planet model/${key}.glb`);
   const isSaturn = (key === "saturn");
   const isEarth = (key === "earth");
   const isUranus = (key === "uranus");
